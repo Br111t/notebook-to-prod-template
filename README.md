@@ -34,3 +34,19 @@ gh repo create my-project --template Br111t/notebook-to-prod-template
 ```bash
 git push && watch GitHub Actions run your tests + build + (optional) Helm install
 ```
+# 4. Testing locally vs. in Docker
+
+Locally (without Docker), you’ll run:
+```bash
+python3 -m venv .venv       # create a virtualenv
+source .venv/bin/activate   # on Windows: .\.venv\Scripts\activate
+pip install -r requirements.txt
+uvicorn app.main:app --reload
+```
+
+In Docker, you’ll do:
+
+```bash
+docker build -t notebook-to-prod .
+docker run -p 8000:8000 notebook-to-prod
+```
