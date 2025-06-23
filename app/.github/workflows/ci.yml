@@ -1,0 +1,31 @@
+name: CI
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Lint
+        run: |
+          # you can swap in your preferred linter later
+          pip install flake8
+          flake8 .
+
+      - name: Smoke test FastAPI
+        run: |
+          uvicorn app.main:app --reload --host 127.0.0.1 --port 8000 &
+          sleep 3
+          curl --fail http://127.0.0.1:8000/
