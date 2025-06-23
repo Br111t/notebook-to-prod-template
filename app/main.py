@@ -24,4 +24,3 @@ def run_notebook():
     )
     client.execute()
     return {"executed_cells": len(nb.cells)}
-
