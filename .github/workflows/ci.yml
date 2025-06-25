@@ -1,31 +1,28 @@
 name: CI
 
-on:
-  push:
-    branches: [ "main" ]
+on: [push, pull_request]
 
 jobs:
-  test:
+  build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v3
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v4
         with:
-          python-version: "3.11"
+          python-version: '3.12.2'
 
-      - name: Install dependencies
+      - name: Install deps
         run: pip install -r requirements.txt
 
-      - name: Lint
+      - name: Lint & format check
         run: |
-          # you can swap in your preferred linter later
-          pip install flake8
-          flake8 .
+          flake8 app tests
+          black --check .
 
-      - name: Smoke test FastAPI
-        run: |
-          uvicorn app.main:app --reload --host 127.0.0.1 --port 8000 &
-          sleep 3
-          curl --fail http://127.0.0.1:8000/
+      - name: Run tests with coverage
+        run: pytest --cov=app tests
+
+      - name: Build Docker image
+        run: docker build . --tag notebook-to-prod:ci

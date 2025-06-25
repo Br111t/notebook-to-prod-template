@@ -20,20 +20,38 @@
 - **Container:** Dockerfile + multi-stage build  
 - **K8s:** Helm v3 chart (`charts/notebook-to-prod`)  
 
+
+## Code Structure 
+```
+notebook-to-prod/
+├── app/
+│   ├── __init__.py
+│   ├── main.py           # FastAPI app
+│   ├── runner.py         # notebook-execution logic
+├── notebooks/
+│   └── example.ipynb
+├── tests/
+│   ├── test_runner.py
+│   └── test_main.py
+├── requirements.txt
+├── Dockerfile
+└── .github/
+    └── workflows/ci.yml
+```
+
 ## 🚀 Quick Start
 
 # 1. Use as template
 ```bash
 gh repo create my-project --template Br111t/notebook-to-prod-template
 ```
-
 # 2. Edit notebook & endpoints
-#    Fill in `example.ipynb` and update `notebook_service.py`
+Fill in `example.ipynb` and update `notebook_service.py`
 
 # 3. CI & deploy
-```bash
 git push && watch GitHub Actions run your tests + build + (optional) Helm install
-```
+
+
 # 4. Testing locally vs. in Docker
 
 Locally (without Docker), you’ll run:

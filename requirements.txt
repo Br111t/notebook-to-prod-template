@@ -1,4 +1,8 @@
-fastapi[standard]
-uvicorn[standard]
-nbclient
-ipykernel
+fastapi[standard]==0.115.13     # Latest FastAPI release (June 17, 2025) :contentReference[oaicite:0]{index=0}
+uvicorn[standard]==0.34.3       # Latest Uvicorn server (mid-2025) :contentReference[oaicite:1]{index=1}
+nbclient==0.10.2                # Notebook execution client (Dec 19, 2024) :contentReference[oaicite:2]{index=2}
+nbformat==5.10.4                # Notebook format library (Apr 4, 2024) :contentReference[oaicite:3]{index=3}
+pytest==8.4.1                   # Testing framework (June 18, 2025) :contentReference[oaicite:4]{index=4}
+flake8==7.3.0                   # Linter (June 20, 2025) :contentReference[oaicite:5]{index=5}
+black==25.1.0                   # Formatter (Jan 28, 2025) :contentReference[oaicite:6]{index=6}
+ipykernel==6.27.0               # Jupyter kernel (June 20, 2025) :contentReference[oaicite:7]{index=7}

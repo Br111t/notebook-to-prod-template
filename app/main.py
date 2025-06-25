@@ -1,6 +1,8 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from nbclient import NotebookClient
+from .runner import run_notebook
 import nbformat
+import pathlib
 
 
 app = FastAPI()
@@ -24,3 +26,16 @@ def run_notebook():
     )
     client.execute()
     return {"executed_cells": len(nb.cells)}
+
+
+
+app = FastAPI()
+
+@app.get("/run/{notebook_name}")
+async def run_notebook_endpoint(notebook_name: str):
+    path = pathlib.Path("notebooks") / f"{notebook_name}.ipynb"
+    if not path.exists():
+        raise HTTPException(404, "Notebook not found")
+    result = run_notebook(str(path))
+    return {"notebook": notebook_name, "result": result}
+
