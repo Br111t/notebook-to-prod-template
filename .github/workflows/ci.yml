@@ -29,15 +29,14 @@ jobs:
           pip install -r requirements.txt
           pip install flake8 black
 
-      - name: Lint & style check
-        run: |
-          flake8 app tests
-          black --check .
+      - name: Lint with Black
+        run: black --check .
+
+      - name: Lint with Flake8
+        run: flake8 app/ src/ tests/
 
       - name: Run tests with coverage
-      env:
-        src
-      run: pytest --cov=app tests
+        run: pytest --cov=app tests
 
       - name: Build Docker image
         run: docker build . --tag notebook-to-prod:ci
