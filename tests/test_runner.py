@@ -1,10 +1,10 @@
 # tests/test_runner.py
 # validates your notebook‐execution logic.
 import os
-import pytest
-from app.runner import run_notebook
+from runner import run_notebook
 
 HERE = os.path.dirname(__file__)
+
 
 def test_example_notebook_runs(tmp_path):
     nb_src = os.path.join(HERE, "..", "notebooks", "example.ipynb")

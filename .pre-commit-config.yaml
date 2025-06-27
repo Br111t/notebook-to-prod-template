@@ -1,0 +1,19 @@
+# .pre-commit-config.yaml
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+
+  - repo: https://github.com/pycqa/flake8
+    rev: 7.3.0
+    hooks:
+      - id: flake8
+        args: [ "app/", "src/" ]
+
+  # (Optional) You can add more, e.g. black, isort, mypy, etc.
+  #- repo: https://github.com/psf/black
+  #  rev: 24.1.0
+  #  hooks:
+  #    - id: black

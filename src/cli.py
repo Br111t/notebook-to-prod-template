@@ -1,34 +1,40 @@
+# src/cli.py
 import pandas as pd
-from typing import List, Optional
-from .emotion import get_emotions  # Import the get_emotions function from emotion.py
+from typing import Optional
+from .emotion import get_analysis
 
-def analyze_csv(
-    input_csv: str = "data/input.csv",
-    text_column: str = "text",
-    output_csv: Optional[str] = None,
-) -> pd.DataFrame:
+
+def analyze_df(df: pd.DataFrame, text_column: str) -> pd.DataFrame:
     """
-    Reads `input_csv`, extracts `text_column`, runs tone analysis,
-    and returns a DataFrame with the original data plus tone columns.
-
-    If `output_csv` is provided, writes the augmented DataFrame to disk.
+    Pure function: takes a DataFrame + name of the text column,
+    returns a new DataFrame with emotion, concepts & semantic-roles merged in.
     """
-    # 1) Read your CSV
-    df_in = pd.read_csv(input_csv)
+    texts = df[text_column].astype(str).tolist()
+    df_analysis = get_analysis(texts).drop(columns=["text"])
+    return pd.concat([df.reset_index(drop=True), df_analysis], axis=1)
 
-    # 2) Pull out the list of texts
-    texts: List[str] = df_in[text_column].astype(str).tolist()
 
-    # 3) Run get_emotions on that list
-    df_tones = get_emotions(texts)
+def main(
+    input_csv: str,
+    text_column: str,
+    output_csv: Optional[str] = None
+):
+    """I/O wrapper: reads CSV, calls analyze_df, writes or prints result."""
+    df = pd.read_csv(input_csv)
+    df_out = analyze_df(df, text_column)
 
-    # 4) Merge the tone-scores back in (aligning on order)
-    #    This will give you a DataFrame with all original columns
-    #    plus one column per tone name.
-    df_out = pd.concat([df_in.reset_index(drop=True), df_tones.drop(columns=["text"])], axis=1)
-
-    # 5) Optionally write to disk
     if output_csv:
         df_out.to_csv(output_csv, index=False)
+        print(f"Wrote analysis to {output_csv}")
+    else:
+        print(df_out.to_string(index=False))
 
-    return df_out
+
+if __name__ == "__main__":
+    import argparse
+    p = argparse.ArgumentParser()
+    p.add_argument("--input",  "-i", required=True, help="path to input CSV")
+    p.add_argument("--column", "-c", required=True, help="text column name")
+    p.add_argument("--output", "-o", help="where to write (optional)")
+    args = p.parse_args()
+    main(args.input, args.column, args.output)

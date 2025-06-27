@@ -10,8 +10,9 @@ jobs:
   build-and-test:
     runs-on: ubuntu-latest
     env:
-      WATSON_APIKEY: ${{ secrets.WATSON_APIKEY }}
-      WATSON_URL:    ${{ secrets.WATSON_URL }}
+      WATSON_APIKEY: ${{ secrets.NLU_APIKEY }}
+      WATSON_URL:    ${{ secrets.NLU_URL }}
+      DEV_MODE: "true"
 
     steps:
       - name: Check out code

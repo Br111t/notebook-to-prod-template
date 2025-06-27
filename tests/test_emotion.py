@@ -1,36 +1,37 @@
 # tests/test_emotion.py
+import importlib
 import pandas as pd
 import pytest
-from src.emotion import get_emotions, analyze_emotion
 
-class DummyTone:
-    def tone(self, payload, content_type):
-        return {"document_tone": {"tones": [
-            {"tone_name": "Joy", "score": 0.9},
-            {"tone_name": "Sadness", "score": 0.1},
-        ]}}
+import src.emotion as emotion_module
+
 
 @pytest.fixture(autouse=True)
-def patch_tone_analyzer(monkeypatch):
-    # Replace the real analyzer with our dummy
-    monkeypatch.setattr("src.emotion.tone_analyzer", DummyTone())
-    yield
+def set_dev_mode(monkeypatch):
+    # Ensure DEV_MODE is true so we use the dummy stub
+    monkeypatch.setenv("DEV_MODE", "true")
+    # Reload the module to pick up the DEV_MODE change
+    importlib.reload(emotion_module)
 
-def test_analyze_emotion_returns_dict():
-    result = analyze_emotion("Hello world")
-    assert "document_tone" in result
-    assert isinstance(result["document_tone"]["tones"], list)
 
-def test_get_emotions_dataframe():
-    texts = ["foo", "bar"]
-    df = get_emotions(texts)
-    # Should have three columns: text, Joy, Sadness
-    assert list(df.columns) == ["text", "Joy", "Sadness"]
-    assert df.shape == (2, 3)
-    assert all(df["Joy"] == 0.9)
-    assert all(df["Sadness"] == 0.1)
+def test_get_analysis_returns_dataframe():
+    texts = ["hello", "world"]
+    df = emotion_module.get_analysis(texts)
+    expected_cols = [
+        "text", "anger", "disgust", "fear", "joy", "sadness",
+        "concepts", "semantic_roles"
+    ]
+    assert list(df.columns) == expected_cols
+    assert df.shape == (2, len(expected_cols))
 
-def test_get_emotions_empty_list():
-    df = get_emotions([])
+    # Dummy stub: joy=1.0, others=0.0; concepts & semantic_roles empty
+    assert all(df["joy"] == 1.0)
+    assert all(df["anger"] == 0.0)
+    assert all(df["concepts"].apply(lambda x: x == []))
+    assert all(df["semantic_roles"].apply(lambda x: x == []))
+
+
+def test_get_analysis_empty_list():
+    df = emotion_module.get_analysis([])
     assert isinstance(df, pd.DataFrame)
     assert df.empty
