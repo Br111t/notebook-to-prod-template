@@ -56,8 +56,8 @@ git push && watch GitHub Actions run your tests + build + (optional) Helm instal
 
 Locally (without Docker), you’ll run:
 ```bash
-python3 -m venv .venv       # create a virtualenv
-source .venv/bin/activate   # on Windows: .\.venv\Scripts\activate
+python -m venv .venv       # create a virtualenv
+source .venv/Scripts/activate   # on Windows: .\.
 pip install -r requirements.txt
 uvicorn app.main:app --reload
 ```

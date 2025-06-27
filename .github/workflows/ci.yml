@@ -39,4 +39,4 @@ jobs:
         run: pytest --cov=app tests
 
       - name: Build Docker image
-        run: docker build -f app/Dockerfile app --tag notebook-to-prod:ci
+        run: docker build . --tag notebook-to-prod:ci
