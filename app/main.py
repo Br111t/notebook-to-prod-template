@@ -17,7 +17,7 @@ app = FastAPI(
 
 @app.get(
     "/run/{notebook_name}",
-    response_model=NotebookOutputs,    # ← tell FastAPI what you return
+    response_model=NotebookOutputs,  # ← tell FastAPI what you return
     tags=["execution"],
     summary="Execute a notebook and fetch its last‐cell outputs",
 )
@@ -28,8 +28,7 @@ async def run_notebook_endpoint(notebook_name: str):
     path = Path("notebooks") / f"{notebook_name}.ipynb"
     if not path.exists():
         raise HTTPException(
-            status_code=404,
-            detail=f"Notebook `{notebook_name}` not found"
+            status_code=404, detail=f"Notebook `{notebook_name}` not found"
         )
 
     return run_notebook(str(path))

@@ -25,6 +25,7 @@ if DEV_MODE:
                 },
                 # no concepts/semantic_roles in dev
             }
+
     NLU_CLIENT = DummyNLU()
 
 else:
@@ -39,7 +40,8 @@ else:
 
     auth = IAMAuthenticator(os.environ["NLU_APIKEY"])
     NLU_CLIENT = NaturalLanguageUnderstandingV1(
-        version="2023-08-01", authenticator=auth)
+        version="2023-08-01", authenticator=auth
+    )
     NLU_CLIENT.set_service_url(os.environ["NLU_URL"])
 
 
@@ -61,9 +63,9 @@ def get_analysis(texts: List[str]) -> pd.DataFrame:
                 features=Features(
                     concepts=ConceptsOptions(limit=8),
                     semantic_roles=SemanticRolesOptions(limit=5),
-                    emotion=EmotionOptions()
+                    emotion=EmotionOptions(),
                 ),
-                return_analyzed_text=False
+                return_analyzed_text=False,
             ).get_result()
 
         # parse emotion
@@ -80,11 +82,13 @@ def get_analysis(texts: List[str]) -> pd.DataFrame:
             obj = r.get("object", {}).get("text", "")
             roles.append((subj, act, obj))
 
-        records.append({
-            "text": txt,
-            **emo,
-            "concepts": concepts,
-            "semantic_roles": roles,
-        })
+        records.append(
+            {
+                "text": txt,
+                **emo,
+                "concepts": concepts,
+                "semantic_roles": roles,
+            }
+        )
 
     return pd.DataFrame.from_records(records)

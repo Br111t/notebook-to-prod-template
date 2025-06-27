@@ -14,11 +14,7 @@ def analyze_df(df: pd.DataFrame, text_column: str) -> pd.DataFrame:
     return pd.concat([df.reset_index(drop=True), df_analysis], axis=1)
 
 
-def main(
-    input_csv: str,
-    text_column: str,
-    output_csv: Optional[str] = None
-):
+def main(input_csv: str, text_column: str, output_csv: Optional[str] = None):
     """I/O wrapper: reads CSV, calls analyze_df, writes or prints result."""
     df = pd.read_csv(input_csv)
     df_out = analyze_df(df, text_column)
@@ -32,8 +28,9 @@ def main(
 
 if __name__ == "__main__":
     import argparse
+
     p = argparse.ArgumentParser()
-    p.add_argument("--input",  "-i", required=True, help="path to input CSV")
+    p.add_argument("--input", "-i", required=True, help="path to input CSV")
     p.add_argument("--column", "-c", required=True, help="text column name")
     p.add_argument("--output", "-o", help="where to write (optional)")
     args = p.parse_args()

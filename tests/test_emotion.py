@@ -18,8 +18,14 @@ def test_get_analysis_returns_dataframe():
     texts = ["hello", "world"]
     df = emotion_module.get_analysis(texts)
     expected_cols = [
-        "text", "anger", "disgust", "fear", "joy", "sadness",
-        "concepts", "semantic_roles"
+        "text",
+        "anger",
+        "disgust",
+        "fear",
+        "joy",
+        "sadness",
+        "concepts",
+        "semantic_roles",
     ]
     assert list(df.columns) == expected_cols
     assert df.shape == (2, len(expected_cols))
