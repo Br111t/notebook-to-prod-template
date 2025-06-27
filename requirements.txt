@@ -13,3 +13,6 @@ pandas==2.3.0                  # Data manipulation & analysis in run-notebook
 # Testing & linting (CI)
 pytest==8.4.1                  # Run unit & integration tests
 flake8==7.3.0                  # Enforce code style & catch simple errors
+
+# Dev Tools
+pytest-cov>=4.0.0          # Measure test coverage
