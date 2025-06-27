@@ -10,8 +10,8 @@ jobs:
   build-and-test:
     runs-on: ubuntu-latest
     env:
-      WATSON_APIKEY: ${{ secrets.NLU_APIKEY }}
-      WATSON_URL:    ${{ secrets.NLU_URL }}
+      NLU_APIKEY: ${{ secrets.NLU_APIKEY }}
+      NLU_URL:    ${{ secrets.NLU_URL }}
       DEV_MODE: "true"
 
     steps:
@@ -35,7 +35,9 @@ jobs:
           black --check .
 
       - name: Run tests with coverage
-        run: pytest --cov=app tests
+      env:
+        src
+      run: pytest --cov=app tests
 
       - name: Build Docker image
         run: docker build . --tag notebook-to-prod:ci
