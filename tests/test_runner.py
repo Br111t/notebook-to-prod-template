@@ -1,7 +1,7 @@
 # tests/test_runner.py
 # validates your notebook‐execution logic.
 import os
-from runner import run_notebook
+from src.runner import run_notebook
 
 HERE = os.path.dirname(__file__)
 
