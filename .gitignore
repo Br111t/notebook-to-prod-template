@@ -1,7 +1,25 @@
+# dotenv environment
 .env
+
+# virtualenvs (if you ever check these in by accident)
+venv/
+.venv/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
+*$py.class
 
-# setuptools metadata
+# Distribution / packaging
+build/
+dist/
 *.egg-info/
+pip-wheel-metadata/
+.eggs/
+
+# Test cache
+.pytest_cache/
+
+# Editor / IDE
+.vscode/
+.idea/
