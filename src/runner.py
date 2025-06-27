@@ -33,11 +33,7 @@ def run_notebook(path: str):
     # Execute the notebook with working directory
     # set to the notebooks directory
     notebooks_dir = project_root / "notebooks"
-    executed_nb = execute(
-        nb,
-        cwd=str(notebooks_dir),
-        kernel_name="python3"
-    )
+    executed_nb = execute(nb, cwd=str(notebooks_dir), kernel_name="python3")
 
     # Collect outputs from all cells
     outputs = []
