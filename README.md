@@ -88,6 +88,7 @@ git push origin main --tags
 pip install .       # or build your package
 python -c "import pkg_resources; print(pkg_resources.get_distribution('notebook-to-prod-template').version)"
 # → prints '1.1.0'
+```
 
 | Bump type | Version change example | What it signals                      |
 | --------- | ---------------------- | ------------------------------------ |
@@ -96,36 +97,39 @@ python -c "import pkg_resources; print(pkg_resources.get_distribution('notebook-
 | Major     | `1.1.0 → 2.0.0`        | Breaking changes, drop support, etc. |
 
 
-```
-
 # 4. Testing locally vs. in Docker
 
 🖥️ Local (without Docker)
-```bash
 # 1) Create a venv
+```bash
 python -m venv .venv
-
+```
 # 2) Activate it
+```bash
 source .venv/bin/activate        # macOS/Linux
 .\.venv\Scripts\Activate.ps1     # Windows PowerShell
-# if you hit an execution-policy error on Windows:
-#   Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned
+```
+if you hit an execution-policy error on Windows:
+Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned
 
 # 3) Install your package (dev deps too, if desired)
+```bash
 pip install .[dev]              # includes pytest, flake8, etc.
-
+```
 # 4) Run tests
 ## Running Pre-commit Hooks & Tests
 Before you commit, you can check code style and catch simple errors with **pre-commit**:
 
+Install pre-commit (if you haven't already):
 ```bash
-# Install pre-commit (if you haven't already):
 pip install pre-commit
-
-# Run all hooks against your staged files:
+```
+Run all hooks against your staged files:
+```bash
 pre-commit run --all-files
-
-# To run a specific hook, e.g. flake8:
+```
+To run a specific hook, e.g. flake8:
+```bash
 pre-commit run flake8 --all-files
 ```
 
