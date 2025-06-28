@@ -1,5 +1,5 @@
-import pandas as pd
 import networkx as nx
+import pandas as pd
 
 
 def preprocess(df: pd.DataFrame) -> pd.DataFrame:
