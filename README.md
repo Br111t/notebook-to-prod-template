@@ -97,53 +97,33 @@ python -c "import pkg_resources; print(pkg_resources.get_distribution('notebook-
 | Major     | `1.1.0 → 2.0.0`        | Breaking changes, drop support, etc. |
 
 
-# 4. Testing locally vs. in Docker
+## 4 Testing & linting
 
-🖥️ Local (without Docker)
-# 1) Create a venv
+### 🖥️ Local workflow (no Docker)
+
 ```bash
+# 1) Create and activate a virtual-env
 python -m venv .venv
+# macOS / Linux
+source .venv/bin/activate
+# Windows PowerShell
+.\.venv\Scripts\Activate.ps1      # Execution-policy error?  ➜  Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned
 ```
-# 2) Activate it
 ```bash
-source .venv/bin/activate        # macOS/Linux
-.\.venv\Scripts\Activate.ps1     # Windows PowerShell
+# 2) Install the project  ➜  core + dev extras (pytest, flake8, nbqa, …)
+python -m pip install --upgrade pip
+pip install ".[dev]"
 ```
-if you hit an execution-policy error on Windows:
-Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned
-
-# 3) Install your package (dev deps too, if desired)
 ```bash
-pip install .[dev]              # includes pytest, flake8, etc.
+# 3) Lint & format (pre-commit runs every hook once)
+pre-commit run --all-files
 ```
+```bash
 # 4) Run tests
-## Running Pre-commit Hooks & Tests
-Before you commit, you can check code style and catch simple errors with **pre-commit**:
-
-Install pre-commit (if you haven't already):
-## Recreate hook envs and reinstall dev deps
-```bash
-# Recreate hook envs and reinstall dev deps
-pre-commit clean           # wipe old hook venvs
-pre-commit install         # ensure the githook is active
-pip install -e ".[dev]" --upgrade
-pre-commit run --all-files # verify before pushing
+pytest -q                                    # terse
+pytest --cov=notebook_service \
+       --cov-report=term-missing             # coverage details
 ```
-To run a specific hook, e.g. flake8:
-```bash
-pre-commit run flake8 --all-files
-```
-
-## To run your full test suite with pytest:
-```bash
-# From the repo root (venv activated if local):
-pytest
-
-# Show coverage report:
-pytest --cov=notebook_service --cov-report=term-missing
-```
-
-
 
 # 5) Run your FastAPI service
 ```
@@ -157,7 +137,7 @@ http://127.0.0.1:8000/docs
 ReDoc:
 http://127.0.0.1:8000/redoc
 
-🐳 Using Docker
+### 🐳 Using Docker
 # 1) Build the image
 docker build -t notebook-to-prod .
 

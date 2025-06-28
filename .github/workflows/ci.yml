@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [main]
   pull_request:
-    branches: [ "main" ]
+    branches: [main]
 
 jobs:
   build-and-test:
@@ -12,31 +12,40 @@ jobs:
     env:
       NLU_APIKEY: ${{ secrets.NLU_APIKEY }}
       NLU_URL:    ${{ secrets.NLU_URL }}
-      DEV_MODE: "true"
+      DEV_MODE:   "true"
 
     steps:
-      - name: Check out code
-        uses: actions/checkout@v4
+      # 1️⃣  Checkout code
+      - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      # 2️⃣  Python toolchain
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
+      # 3️⃣  Install deps (core + dev)
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install .
-          pip install flake8 black[jupyter]
+          pip install ".[dev]"
 
-      - name: Lint with Black
-        run: black --check .
+      # 4️⃣  Restore cached pre-commit hook environments
+      - name: Restore pre-commit envs
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pre-commit
+          key:  ${{ runner.os }}-precommit-${{ hashFiles('.pre-commit-config.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-precommit-
 
-      - name: Lint with Flake8
-        run: flake8 app/ src/ tests/
+      # 5️⃣  Lint & format checks (driven by .pre-commit-config.yaml)
+      - name: Lint and format (pre-commit)
+        run: pre-commit run --all-files --hook-stage manual
 
+      # 6️⃣  Tests + coverage
       - name: Run tests with coverage
-        run: pytest --cov=app tests
+        run: pytest --cov=src/notebook_service tests/
 
+      # 7️⃣  Build Docker image (optional artifact)
       - name: Build Docker image
         run: docker build . --tag notebook-to-prod:ci

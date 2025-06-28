@@ -1,8 +1,8 @@
 default_language_version:
-  python: python3   # ← “use the python3 that is available” (3.13 on your PC)
+  python: python3        # whichever 3.x is on PATH (3.13 locally)
 
 repos:
-  # Cleanup hooks
+  # 1️⃣  Basic cleanup
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
     hooks:
@@ -11,32 +11,42 @@ repos:
       - id: trailing-whitespace
         exclude: "\\.ipynb$"
 
-  # Flake8
+  # 2️⃣  Flake8 on .py files (src + tests + notebooks)
   - repo: https://github.com/pycqa/flake8
     rev: 7.3.0
     hooks:
       - id: flake8
         args: ["--max-line-length=79"]
-        files: ^(src|tests)/.*\.py$
+        files: "^(src|tests)/.*\\.py$"
 
-  # isort (optional first)
+  # 3️⃣  nbQA-flaked8 on .ipynb notebooks
+  - repo: https://github.com/nbQA-dev/nbQA
+    rev: 1.9.1
+    hooks:
+      - id: nbqa-flake8
+        name: flake8 on notebooks
+        args: ["--max-line-length=79"]
+        additional_dependencies:
+          - "flake8==7.3.0"
+        files: "^notebooks/.*\\.ipynb$"
+
+  # 4️⃣  isort on .py files
   - repo: https://github.com/PyCQA/isort
     rev: 5.12.0
     hooks:
       - id: isort
-        args:
-          - "--profile=black"
-          - "--line-length=79"
-        files: ^(src|tests)/.*\.py$
+        args: ["--profile=black", "--line-length=79"]
+        files: "^(src|tests)/.*\\.py$"
 
-  # Local hook for Black with Jupyter support
+  # 5️⃣  Black (with Jupyter support) on notebooks
   - repo: local
     hooks:
       - id: black-notebook
         name: black (python + notebooks)
         entry: black
         language: python
+        language_version: python3        # optional, keeps envs consistent
         additional_dependencies:
-          - "black[jupyter]==24.1.0"      # ← install from PyPI
+          - "black[jupyter]==24.1.0"
         args: ["--line-length=79"]
-        files: "\\.ipynb$"
+        files: "^notebooks/.*\\.ipynb$"
