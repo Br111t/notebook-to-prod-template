@@ -1,24 +1,21 @@
-# Stage 1: build environment
-FROM python:3.12.2-slim AS builder
+# Use the official Python image as a base
+FROM python:3.11-slim
+
+# Set a working directory
 WORKDIR /app
 
-# Install only what you need to build your wheel/packages
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Copy only the metadata first (for better cache usage)
+COPY pyproject.toml .
 
-# Stage 2: runtime
-FROM python:3.12.2-slim
-WORKDIR /app
+# Copy your source and other assets
+COPY src/ ./src/
+COPY notebooks/ ./notebooks/
+COPY data/ ./data/
 
-# Pull in your installed dependencies
-COPY --from=builder /usr/local/lib/python3.12/site-packages /usr/local/lib/python3.12/site-packages
+# Install your package (and deps) in editable mode, or normal mode
+RUN pip install --upgrade pip \
+ && pip install .
 
-# Copy your application code
-COPY app/ app/
-COPY notebooks/ notebooks/
-
-# (Optional) expose the port your app listens on
+# Expose port & launch
 EXPOSE 8000
-
-# Run your FastAPI service
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "notebook_service.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]

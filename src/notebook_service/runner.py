@@ -1,8 +1,9 @@
-# src/runner.py
-
 import sys
 from pathlib import Path
+
 import nbformat
+import networkx as nx
+import pandas as pd
 from nbclient import execute
 
 
@@ -16,18 +17,20 @@ def run_notebook(path: str):
         A dict with a single key 'outputs' containing a
         list of output strings from all notebook cells.
     """
+    # Determine project root (runner.py is in
+    # PROJECT_ROOT/src/notebook_service)
+    project_root = Path(__file__).resolve().parents[2]
+
+    # Make sure notebooks can import our package:
+    src_dir = project_root / "src"
+    if str(src_dir) not in sys.path:
+        sys.path.insert(0, str(src_dir))
+
     # Resolve the notebook path to an absolute path
     nb_file = Path(path).resolve()
 
-    # Determine project root (assuming this file is in PROJECT_ROOT/src)
-    project_root = Path(__file__).resolve().parent.parent
-
-    # Prepend paths to allow notebook imports
-    sys.path.insert(0, str(project_root / "src"))
-    sys.path.insert(0, str(project_root))
-
     # Read the notebook
-    with open(nb_file, encoding="utf-8") as f:
+    with nb_file.open("r", encoding="utf-8") as f:
         nb = nbformat.read(f, as_version=4)
 
     # Execute the notebook with working directory
@@ -49,3 +52,32 @@ def run_notebook(path: str):
                     outputs.append(text)
 
     return {"outputs": outputs}
+
+
+def load_data(path: str) -> pd.DataFrame:
+    """
+    Stub for loading a CSV or other tabular data into a DataFrame.
+    """
+    return pd.read_csv(path)
+
+
+def preprocess(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Stub for any DataFrame cleaning / feature extraction.
+    """
+    # e.g. df["clean_text"] = df["text"].str.lower()
+    return df
+
+
+def build_semantic_graph(df: pd.DataFrame) -> nx.Graph:
+    """
+    Stubbed implementation — replace with your real graph‐building logic.
+    """
+    G = nx.Graph()
+    # e.g. for each concept in df.concepts:
+    #     G.add_node(concept)
+    return G
+
+
+def compute_centrality(G: nx.Graph) -> dict:
+    return nx.degree_centrality(G)

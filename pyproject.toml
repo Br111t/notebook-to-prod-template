@@ -1,5 +1,71 @@
+[build-system]
+requires = [
+  "setuptools>=61.0",
+  "wheel",
+  "setuptools_scm>=6.0"        # for auto‐versioning
+]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "notebook-to-prod-template"
+version = "0.1.0"               # setuptools_scm will override this at build time
+description = "Execute Jupyter notebooks via REST and return their outputs"
+authors = [
+  { name = "Brittany L. Bales", email = "412bales@gmail.com" },
+]
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.8"
+
+
+dependencies = [
+  # Web framework & server
+  "fastapi[standard]==0.115.13",
+  "uvicorn[standard]==0.34.3",
+
+  # Notebook execution & kernels
+  "nbclient==0.10.2",
+  "ipykernel==6.27.0",
+  "nbformat>=5.7.0",
+  "jupyter-core>=5.8.1",
+
+  # Data processing & NLP
+  "pandas==2.3.0",
+  "networkx>=3.0",
+  "matplotlib>=3.5",            # for your visualize_graph tests
+  "python-dotenv>=1.0",         # if you load .env files in main or elsewhere
+
+  # IBM Watson SDK
+  "ibm-watson==10.0.0",
+  "ibm-cloud-sdk-core>=3.0",    # pin a minimum version
+
+  # CLI
+  "click>=8.0"
+]
+
+[project.optional-dependencies]
+dev = [
+  # Testing & linting (CI)
+  "pytest==8.4.1",
+  "pytest-cov>=4.0.0",
+  "flake8==7.3.0",
+  "black>=23.1.0",
+  "setuptools_scm>=6.0",        # hooks into setuptools for git‐driven versions
+]
+
+[project.scripts]
+notebook-cli = "notebook_service.cli:main"
+
 [tool.black]
 line-length = 79
 
 [tool.pytest.ini_options]
-pythonpath = ["."]
+pythonpath = ["src"]
+filterwarnings = [
+  "ignore:.*Jupyter is migrating its paths.*:DeprecationWarning"
+]
+
+[tool.setuptools_scm]
+# automatically derive versions from your git tags
+version_scheme = "post-release"
+local_scheme = "no-local-version"

@@ -28,3 +28,6 @@ pip-wheel-metadata/
 .coverage
 coverage.xml
 htmlcov/
+
+# Data files
+data/output.csv

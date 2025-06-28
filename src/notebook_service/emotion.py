@@ -1,8 +1,8 @@
 import os
-from typing import List, Any, Dict
+from typing import Any, Dict, List
+
 import pandas as pd
 from dotenv import load_dotenv
-
 
 load_dotenv()
 DEV_MODE = os.getenv("DEV_MODE", "false").lower() == "true"
@@ -32,10 +32,10 @@ else:
     from ibm_cloud_sdk_core.authenticators import IAMAuthenticator
     from ibm_watson import NaturalLanguageUnderstandingV1
     from ibm_watson.natural_language_understanding_v1 import (
-        Features,
         ConceptsOptions,
-        SemanticRolesOptions,
         EmotionOptions,
+        Features,
+        SemanticRolesOptions,
     )
 
     auth = IAMAuthenticator(os.environ["NLU_APIKEY"])

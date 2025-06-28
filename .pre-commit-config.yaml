@@ -1,19 +1,36 @@
-# .pre-commit-config.yaml
 repos:
+  # Basic cleanup hooks
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
     hooks:
       - id: end-of-file-fixer
       - id: trailing-whitespace
 
+  # Flake8 for linting your code
   - repo: https://github.com/pycqa/flake8
     rev: 7.3.0
     hooks:
       - id: flake8
-        args: [ "app/", "src/" ]
+        args:
+          - "--max-line-length=79"
+        files: ^(src/notebook_service|tests)/.*\.py$
 
-  # (Optional) You can add more, e.g. black, isort, mypy, etc.
-  #- repo: https://github.com/psf/black
-  #  rev: 24.1.0
-  #  hooks:
-  #    - id: black
+  # Black for formatting Python and Jupyter notebooks
+  - repo: https://github.com/psf/black
+    rev: 24.1.0
+    hooks:
+      - id: black
+        additional_dependencies: ["black[jupyter]"]
+        args:
+          - "--line-length=79"
+        # run on both .py and .ipynb files
+        files: \.(py|ipynb)$
+
+  # (Optional) isort to keep imports sorted
+  - repo: https://github.com/PyCQA/isort
+    rev: 5.12.0
+    hooks:
+      - id: isort
+        args:
+          - "--profile=black"
+        files: ^(src/notebook_service|tests)/.*\.py$

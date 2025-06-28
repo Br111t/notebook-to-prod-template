@@ -1,8 +1,10 @@
 # app/main.py
-from fastapi import FastAPI, HTTPException
 from pathlib import Path
-from src.runner import run_notebook
-from app.schemas import NotebookOutputs  # ← import your schema
+
+from fastapi import FastAPI, HTTPException
+
+from notebook_service.runner import run_notebook
+from notebook_service.schemas import NotebookOutputs  # ← import your schema
 
 app = FastAPI(
     title="Notebook-to-API",
