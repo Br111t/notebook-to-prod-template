@@ -62,7 +62,6 @@ notebook-cli = "notebook_service.cli:main"
 line-length = 79
 
 [tool.pytest.ini_options]
-pythonpath = ["src"]
 filterwarnings = [
   "ignore:.*Jupyter is migrating its paths.*:DeprecationWarning"
 ]
@@ -71,3 +70,9 @@ filterwarnings = [
 # automatically derive versions from your git tags
 version_scheme = "post-release"
 local_scheme = "no-local-version"
+
+[tool.setuptools]
+package-dir = {"" = "src"}        # root package(s) live in ./src
+
+[tool.setuptools.packages.find]
+where = ["src"]                   # scan only the src/ tree
