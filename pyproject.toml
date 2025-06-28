@@ -49,7 +49,7 @@ dev = [
   "pytest==8.4.1",
   "pytest-cov>=4.0.0",
   "flake8==7.3.0",
-  "black[jupyter]>=23.1.0",
+  "black[jupyter]==24.1.0",
   "setuptools_scm>=6.0",        # hooks into setuptools for git‐driven versions
 ]
 

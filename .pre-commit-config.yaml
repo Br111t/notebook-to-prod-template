@@ -1,36 +1,42 @@
+default_language_version:
+  python: python3   # ← “use the python3 that is available” (3.13 on your PC)
+
 repos:
-  # Basic cleanup hooks
+  # Cleanup hooks
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
     hooks:
       - id: end-of-file-fixer
+        exclude: "\\.ipynb$"
       - id: trailing-whitespace
+        exclude: "\\.ipynb$"
 
-  # Flake8 for linting your code
+  # Flake8
   - repo: https://github.com/pycqa/flake8
     rev: 7.3.0
     hooks:
       - id: flake8
-        args:
-          - "--max-line-length=79"
+        args: ["--max-line-length=79"]
         files: ^(src/notebook_service|tests)/.*\.py$
 
-  # Black for formatting Python and Jupyter notebooks
-  - repo: https://github.com/psf/black
-    rev: 24.1.0
-    hooks:
-      - id: black
-        additional_dependencies: ["black[jupyter]"]
-        args:
-          - "--line-length=79"
-        # run on both .py and .ipynb files
-        files: \.(py|ipynb)$
-
-  # (Optional) isort to keep imports sorted
+  # isort (optional first)
   - repo: https://github.com/PyCQA/isort
     rev: 5.12.0
     hooks:
       - id: isort
         args:
           - "--profile=black"
+          - "--line-length=79"
         files: ^(src/notebook_service|tests)/.*\.py$
+
+  # Local hook for Black with Jupyter support
+  - repo: local
+    hooks:
+      - id: black-notebook
+        name: black (python + notebooks)
+        entry: black
+        language: python
+        additional_dependencies:
+          - "black[jupyter]==24.1.0"      # ← install from PyPI
+        args: ["--line-length=79"]
+        files: "\\.ipynb$"

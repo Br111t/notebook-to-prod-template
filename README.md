@@ -121,12 +121,13 @@ pip install .[dev]              # includes pytest, flake8, etc.
 Before you commit, you can check code style and catch simple errors with **pre-commit**:
 
 Install pre-commit (if you haven't already):
+## Recreate hook envs and reinstall dev deps
 ```bash
-pip install pre-commit
-```
-Run all hooks against your staged files:
-```bash
-pre-commit run --all-files
+# Recreate hook envs and reinstall dev deps
+pre-commit clean           # wipe old hook venvs
+pre-commit install         # ensure the githook is active
+pip install -e ".[dev]" --upgrade
+pre-commit run --all-files # verify before pushing
 ```
 To run a specific hook, e.g. flake8:
 ```bash
