@@ -57,6 +57,10 @@ repos:
       - id: pip-audit
         name: pip-audit (security check)
         entry: pip-audit
-        language: system
+        language: python
+        language_version: python3
         types: [python]
         pass_filenames: false
+        additional_dependencies:
+          - pip-audit==2.7.3
+          - setuptools>=65.5.1
