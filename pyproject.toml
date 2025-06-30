@@ -40,7 +40,9 @@ dependencies = [
   "ibm-cloud-sdk-core>=3.0",    # pin a minimum version
 
   # CLI
-  "click>=8.0"
+  "click>=8.0",
+
+  "nest_asyncio>=1.5.6",
 ]
 
 [project.optional-dependencies]
@@ -49,10 +51,12 @@ dev = [
   "pytest==8.4.1",
   "pytest-cov>=4.0.0",
   "flake8==7.3.0",
-  "black[jupyter]==24.1.0",
+  "black[jupyter]==24.3.0",
   "nbqa==1.9.1",
   "isort==5.12.0",
-  "pre-commit==3.4.0"
+  "pre-commit==3.4.0",
+  "pip-audit==2.7.3",
+  "ipykernel==6.27.0",
 ]
 
 [project.scripts]
@@ -62,9 +66,16 @@ notebook-cli = "notebook_service.cli:main"
 line-length = 79
 
 [tool.pytest.ini_options]
+addopts = [
+  "--cov",
+  "src/notebook_service",
+  "--cov-report",
+  "term-missing"
+]
 filterwarnings = [
   "ignore:.*Jupyter is migrating its paths.*:DeprecationWarning"
 ]
+
 
 [tool.setuptools_scm]
 # automatically derive versions from your git tags

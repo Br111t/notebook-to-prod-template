@@ -103,16 +103,27 @@ python -c "import pkg_resources; print(pkg_resources.get_distribution('notebook-
 
 ```bash
 # 1) Create and activate a virtual-env
-python -m venv .venv
+py -m venv .venv
 # macOS / Linux
 source .venv/bin/activate
 # Windows PowerShell
 .\.venv\Scripts\Activate.ps1      # Execution-policy error?  ➜  Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned
+
+# copy your local .env into the venv
+cp .env .venv/
+
+# register your venv as a jupyter kernel
+# with your .venv activated:
+py -m ipykernel install --sys-prefix --name notebook-to-prod --display-name "Python (notebook-to-prod)"
+
 ```
+Then in VS Code’s notebook kernel picker choose Python (notebook-to-prod)
+
 ```bash
 # 2) Install the project  ➜  core + dev extras (pytest, flake8, nbqa, …)
-python -m pip install --upgrade pip
+py -m pip install --upgrade pip
 pip install ".[dev]"
+pip-audit
 ```
 ```bash
 # 3) Lint & format (pre-commit runs every hook once)
@@ -132,17 +143,17 @@ uvicorn notebook_service.main:app --reload
 FastAPI automatically mounts the interactive OpenAPI docs at:
 
 Swagger UI:
-http://127.0.0.1:8000/docs
+http://localhost:8000/docs
 
 ReDoc:
-http://127.0.0.1:8000/redoc
+http://localhost:8000/redoc
 
 ### 🐳 Using Docker
 # 1) Build the image
 docker build -t notebook-to-prod .
 
 # 2) Run the container
-docker run -p 8000:8000 notebook-to-prod
+docker run -p 8000:8000 --env-file .env notebook-to-prod
 
 # 3) Exec into container and run tests (optional)
 docker exec -it <container_id> pytest

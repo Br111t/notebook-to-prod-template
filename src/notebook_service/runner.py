@@ -1,13 +1,18 @@
+# src/notebook_service/runner.py
 import os
 from pathlib import Path
 
 import nbformat
+import nest_asyncio
 import networkx as nx
 import pandas as pd
 from nbclient import execute
 
 DEFAULT_NOTEBOOK_DIR = Path(__file__).resolve().parent / "notebooks"
 NOTEBOOK_DIR = Path(os.getenv("NOTEBOOK_DIR", DEFAULT_NOTEBOOK_DIR))
+
+
+nest_asyncio.apply()
 
 
 def run_notebook(path: str):
@@ -35,18 +40,25 @@ def run_notebook(path: str):
         cwd=str(nb_path.parent),  # run from the notebook’s folder
     )
 
-    # Collect plain-text outputs
-    outputs: list[str] = []
-    for cell in executed_nb.cells:
+    # Structured objects with type and data
+    collected: list[dict] = []
+    for idx, cell in enumerate(executed_nb.cells, start=1):
         for out in cell.get("outputs", []):
-            if out.get("output_type") == "stream":
-                outputs.append(out.get("text", ""))
+            ot = out["output_type"]
+            if ot == "stream":
+                collected.append(
+                    {"cell": idx,
+                     "type": ot,
+                     "data": out["text"]})
             else:
-                text = out.get("data", {}).get("text/plain")
-                if text:
-                    outputs.append(text)
+                txt = out["data"].get("text/plain")
+                if txt:
+                    collected.append(
+                        {"cell": idx,
+                         "type": ot,
+                         "data": txt})
 
-    return {"outputs": outputs}
+    return {"outputs": collected}
 
 
 def load_data(path: str) -> pd.DataFrame:

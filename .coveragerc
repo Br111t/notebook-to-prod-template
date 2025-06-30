@@ -1,0 +1,13 @@
+[run]
+# Where your package lives
+source =
+    src/notebook_service
+
+# Never measure coverage in your venv or tests
+omit =
+    .venv/*
+    tests/*
+
+[report]
+# Show missing lines in the terminal
+show_missing = True

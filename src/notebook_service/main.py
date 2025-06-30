@@ -3,6 +3,7 @@ import os
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
+from starlette.concurrency import run_in_threadpool
 
 from notebook_service import __version__
 from notebook_service.runner import DEFAULT_NOTEBOOK_DIR, run_notebook
@@ -21,14 +22,12 @@ app = FastAPI(
     summary="Execute a notebook and fetch its outputs",
 )
 async def run_notebook_endpoint(notebook_name: str):
-    """
-    Execute <NOTEBOOK_DIR>/<notebook_name>.ipynb and return its outputs.
-    """
-    notebooks_dir = Path(os.getenv("NOTEBOOK_DIR", DEFAULT_NOTEBOOK_DIR))
-    nb_path = notebooks_dir / f"{notebook_name}.ipynb"
 
+    notebooks_dir = Path(os.getenv("NOTEBOOK_DIR", DEFAULT_NOTEBOOK_DIR))
+
+    nb_path = notebooks_dir / f"{notebook_name}.ipynb"
     if not nb_path.exists():
         raise HTTPException(status_code=404, detail="Notebook not found")
 
     # Pass the *absolute* path so run_notebook uses it verbatim
-    return run_notebook(str(nb_path))
+    return await run_in_threadpool(run_notebook, str(nb_path))

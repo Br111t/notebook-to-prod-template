@@ -49,3 +49,13 @@ jobs:
       # 7️⃣  Build Docker image (optional artifact)
       - name: Build Docker image
         run: docker build . --tag notebook-to-prod:ci
+
+      # 8️⃣  Test Docker image
+      - name: Run container & smoke-test
+        run: |
+          docker run -d --rm -p 8000:8000 \
+            --env NLU_APIKEY="${{ secrets.NLU_APIKEY }}" \
+            --env NLU_URL="${{ secrets.NLU_URL }}" \
+            notebook-to-prod:ci
+          sleep 5
+          curl -f http://localhost:8000/run/example

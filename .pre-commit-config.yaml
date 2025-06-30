@@ -50,3 +50,13 @@ repos:
           - "black[jupyter]==24.1.0"
         args: ["--line-length=79"]
         files: "^notebooks/.*\\.ipynb$"
+
+  # 6️⃣  pip-audit for dependency vulnerability checking
+  - repo: local
+    hooks:
+      - id: pip-audit
+        name: pip-audit (security check)
+        entry: pip-audit
+        language: system
+        types: [python]
+        pass_filenames: false
