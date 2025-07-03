@@ -1,13 +1,16 @@
+# .coveragerc
 [run]
-# Where your package lives
-source =
-    src/notebook_service
+# only measure code in your package
+source = notebook_service
 
-# Never measure coverage in your venv or tests
+# trace code in threads (TestClient spins up a thread)
+concurrency = thread
+
+[report]
+# show you exactly which lines were missed
+show_missing = True
+
+# don’t measure your venv or your tests
 omit =
     .venv/*
     tests/*
-
-[report]
-# Show missing lines in the terminal
-show_missing = True

@@ -83,11 +83,8 @@ git add .
 git commit -m "Your meaningful commit message"
 # when ready to cut a release:
 git tag v1.1.0
+git describe --tags --exact-match
 git push origin main --tags
-# now:
-pip install .       # or build your package
-python -c "import pkg_resources; print(pkg_resources.get_distribution('notebook-to-prod-template').version)"
-# → prints '1.1.0'
 ```
 
 | Bump type | Version change example | What it signals                      |
@@ -121,8 +118,8 @@ Then in VS Code’s notebook kernel picker choose Python (notebook-to-prod)
 
 ```bash
 # 2) Install the project  ➜  core + dev extras (pytest, flake8, nbqa, …)
-py -m pip install --upgrade pip
-pip install ".[dev]"
+py -m pip install --upgrade pip setuptools
+pip install -e ".[dev]"
 pip-audit
 ```
 ```bash
@@ -160,5 +157,5 @@ docker exec -it <container_id> pytest
 
 Tip: If you need the docs inside Docker, expose the host and port:
 ```bash
-docker run -p 8000:8000 notebook-to-prod uvicorn notebook_service.main:app --host 0.0.0.0
+docker run -p 8000:8000 --env-file .env notebook-to-prod uvicorn notebook_service.main:app --host 0.0.0.0
 ```
