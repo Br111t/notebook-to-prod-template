@@ -68,10 +68,8 @@ line-length = 79
 
 [tool.pytest.ini_options]
 addopts = [
-  "--cov",
-  "src/notebook_service",
-  "--cov-report",
-  "term-missing"
+  "--cov=notebook_service",
+  "--cov-report=term-missing"
 ]
 filterwarnings = [
   "ignore:.*Jupyter is migrating its paths.*:DeprecationWarning"

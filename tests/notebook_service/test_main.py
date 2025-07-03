@@ -1,7 +1,11 @@
 # ensures your API layer works.
 # integration—spinning up the FastAPI
 # endpoint and hitting it via TestClient.
+import nbformat
 import pytest
+
+import notebook_service.runner
+from notebook_service.runner import run_notebook
 
 
 @pytest.mark.parametrize(
@@ -28,19 +32,23 @@ def test_run_endpoint(
     assert resp.status_code == status_code
 
 
-# def test_run_endpoint(client, tmp_path, sample_notebook,
-# notebook_name, status_code):
+def test_run_notebook_executes_cells(tmp_path):
+    # 1) Create a notebook with one code cell that prints "hello world"
+    nb = nbformat.v4.new_notebook()
+    nb.cells.append(nbformat.v4.new_code_cell("print('hello world')"))
+    nbfile = tmp_path / "foo.ipynb"
+    nbfile.write_text(nbformat.writes(nb))
 
-#     sample_notebook(tmp_path)
+    # 2) Call the function directly
+    result = run_notebook(nbfile)
 
-#     # Compute PROJECT_ROOT/tests/notebook_service → climb two levels up
-#     project_root = Path(__file__).resolve().parents[2]
-#     nb_src = project_root / "notebooks" / "example.ipynb"
+    # 3) Assert we saw "hello world" in one of the stream outputs
+    outputs = result.get("outputs", [])
+    assert outputs, f"No outputs found in {result!r}"
 
-#     # Copy the notebook into a temp dir so run_notebook can open it
-#     nb_copy = tmp_path / "example.ipynb"
-#     nb_copy.write_bytes(nb_src.read_bytes())
+    print("RUNNER FILE:", notebook_service.runner.__file__)
 
-#     path = f"/run/{notebook_name}"
-#     resp = client.get(path)
-#     assert resp.status_code == status_code
+    # each output is a dict with keys 'cell', 'type', 'data'
+    stream_data = [o["data"] for o in outputs if o.get("type") == "stream"]
+    assert any("hello world" in data for data in stream_data), \
+        f"'hello world' not found in stream outputs: {stream_data!r}"
