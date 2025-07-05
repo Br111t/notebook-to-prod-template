@@ -7,7 +7,7 @@ from notebook_service.runner import (
     build_semantic_graph,
     compute_centrality,
     load_data,
-    preprocess,
+    preprocess_concepts,
 )
 
 pytest.skip("Not ready yet", allow_module_level=True)
@@ -23,7 +23,7 @@ def test_load_data_schema(tmp_path, sample_csv):
 
 def test_preprocess_adds_columns():
     df = pd.DataFrame({"entry": ["I am grateful", "I am happy"]})
-    df2 = preprocess(df)
+    df2 = preprocess_concepts(df)
     assert "clean_text" in df2.columns
     assert "concepts" in df2.columns
 
