@@ -31,9 +31,10 @@ dependencies = [
 
   # Data processing & NLP
   "pandas==2.3.0",
-  "networkx>=3.0",
-  "matplotlib>=3.5",            # for your visualize_graph tests
-  "python-dotenv>=1.0",         # if you load .env files in main or elsewhere
+  "networkx>=3.1",
+  "matplotlib>=3.7.1",            # for your visualize_graph tests
+  "python-dotenv>=1.1.1",         # if you load .env files in main or elsewhere
+  "scikit-learn==1.7.0",
 
   # IBM Watson SDK
   "ibm-watson==10.0.0",
