@@ -1,7 +1,7 @@
 import networkx as nx
 import pytest
 
-from notebook_service.visualize import visualize_graph
+from notebook_service.visualization import visualize_graph
 
 pytest.skip("Not ready yet", allow_module_level=True)
 

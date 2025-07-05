@@ -1,5 +1,5 @@
 import os
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple
 
 import pandas as pd
 from dotenv import load_dotenv
@@ -71,24 +71,26 @@ def get_analysis(texts: List[str]) -> pd.DataFrame:
         # parse emotion
         emo = raw["emotion"]["document"]["emotion"]
 
-        # parse concepts
-        concepts = [c["text"] for c in raw.get("concepts", [])]
+        # keep full raw concepts
+        concepts_raw = raw.get("concepts", [])
+
+        # extract just the text for your existing pipeline
+        concepts = [c["text"] for c in concepts_raw]
 
         # parse semantic roles
-        roles = []
+        roles: List[Tuple[str, str, str]] = []
         for r in raw.get("semantic_roles", []):
             subj = r["subject"]["text"]
             act = r["action"]["text"]
             obj = r.get("object", {}).get("text", "")
             roles.append((subj, act, obj))
 
-        records.append(
-            {
-                "text": txt,
-                **emo,
-                "concepts": concepts,
-                "semantic_roles": roles,
-            }
-        )
+        records.append({
+            "text": txt,
+            **emo,
+            "concepts_raw": concepts_raw,
+            "concepts": concepts,
+            "semantic_roles": roles,
+        })
 
     return pd.DataFrame.from_records(records)
