@@ -12,7 +12,8 @@ jobs:
     env:
       NLU_APIKEY: ${{ secrets.NLU_APIKEY }}
       NLU_URL:    ${{ secrets.NLU_URL }}
-      DEV_MODE:   "true"
+      DEV_MODE: ${{ github.ref == 'refs/heads/main' && 'false' || 'true' }}
+
 
     steps:
       # 1️⃣  Checkout code
@@ -64,12 +65,39 @@ jobs:
       - name: Build Docker image
         run: docker build . --tag notebook-to-prod:ci
 
-      # 9️⃣  Test Docker image
-      - name: Run container & smoke-test
+      # 9️⃣  Check that secrets are passed (partial echo)
+      - name: Check that secrets are passed (partial echo)
         run: |
-          docker run -d --rm -p 8000:8000 \
+          echo "NLU_APIKEY starts with: ${NLU_APIKEY:0:6}******"
+          echo "NLU_URL base: $(echo $NLU_URL | cut -d/ -f3)"
+        env:
+          NLU_APIKEY: ${{ secrets.NLU_APIKEY }}
+          NLU_URL: ${{ secrets.NLU_URL }}
+
+      # 🔟  Run smoke test (mock NLU)
+      - name: Run smoke test (mock NLU)
+        if: github.ref != 'refs/heads/main'
+        run: |
+          docker run -d -p 8000:8000 --rm \
+            --env DEV_MODE=true \
+            --name app notebook-to-prod:ci
+          sleep 5
+          echo "🪵 Container logs:"
+          docker logs app
+          echo "🌐 Hitting endpoint:"
+          curl -v http://localhost:8000/run/example
+
+      # 🌟 11️⃣ Run smoke test (real Watson NLU)
+      - name: Run smoke test (real Watson NLU)
+        if: github.ref == 'refs/heads/main'
+        run: |
+          docker run -d -p 8000:8000 --rm \
             --env NLU_APIKEY="${{ secrets.NLU_APIKEY }}" \
             --env NLU_URL="${{ secrets.NLU_URL }}" \
-            notebook-to-prod:ci
+            --env DEV_MODE=false \
+            --name app notebook-to-prod:ci
           sleep 5
-          curl -f http://localhost:8000/run/example
+          echo "🪵 Container logs:"
+          docker logs app
+          echo "🌐 Hitting endpoint:"
+          curl -v http://localhost:8000/run/example
