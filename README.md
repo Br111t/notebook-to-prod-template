@@ -106,8 +106,6 @@ source .venv/bin/activate
 # Windows PowerShell
 .\.venv\Scripts\Activate.ps1      # Execution-policy error?  ➜  Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned
 
-# copy your local .env into the venv
-cp .env .venv/
 
 # register your venv as a jupyter kernel
 # with your .venv activated:

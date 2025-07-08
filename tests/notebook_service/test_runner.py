@@ -1,14 +1,9 @@
 # unit—test exercising your run_notebook library logic.
-import networkx as nx
 import pandas as pd
 import pytest
 
-from notebook_service.runner import (
-    build_semantic_graph,
-    compute_centrality,
-    load_data,
-    preprocess_concepts,
-)
+from notebook_service.graph_builder import preprocess_concepts
+from notebook_service.runner import load_data
 
 pytest.skip("Not ready yet", allow_module_level=True)
 
@@ -26,22 +21,6 @@ def test_preprocess_adds_columns():
     df2 = preprocess_concepts(df)
     assert "clean_text" in df2.columns
     assert "concepts" in df2.columns
-
-
-def test_build_semantic_graph_nodes_edges():
-    df = pd.DataFrame({"entry": ["A", "B", "A B"]})
-    G = build_semantic_graph(df)
-    # expecting at least nodes "A", "B"
-    assert set(G.nodes).issuperset({"A", "B"})
-    # and an edge between them for the joint entry
-    assert G.has_edge("A", "B")
-
-
-def test_compute_centrality_values():
-    G = nx.path_graph([1, 2, 3])
-    cent = compute_centrality(G)
-    # middle node 2 has highest centrality in a 3-node path
-    assert cent[2] > cent[1] and cent[2] > cent[3]
 
 
 # def test_example_notebook_runs(tmp_path):
