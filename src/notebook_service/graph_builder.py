@@ -1,12 +1,14 @@
 # graph_builder.py
 import json
+from collections import Counter
 from itertools import combinations
 from pathlib import Path
+from typing import Dict
 
+import community as community_louvain
 import networkx as nx
+import numpy as np
 import pandas as pd
-from networkx import DiGraph, Graph
-from networkx.algorithms.community import greedy_modularity_communities
 from sklearn.preprocessing import MultiLabelBinarizer
 
 # Load per-document exclusions from JSON config
@@ -109,62 +111,119 @@ def compute_cooccurrence(
     return M, C, edges
 
 
-def build_semantic_graph(
-    df_concepts: pd.DataFrame,
-    threshold: int = 1,
-    directed: bool = False
-) -> nx.Graph | nx.DiGraph:
+def threshold_undirected_graph(
+    C: pd.DataFrame | np.ndarray,
+    feat_names: list[str],
+    percentile: float,
+) -> nx.Graph:
     """
-    Build either an undirected or directed co-occurrence graph.
-    - undirected: symmetric co-occurrence edges
-    - directed: edge A->B only if A precedes B in the doc’s concept list
+    Prune G_und by keeping edges in the top percentile (of C weights).
     """
-    M, C, edges = compute_cooccurrence(df_concepts, threshold)
+    # -- Data prep (assumes df_concepts and C exist) --
+    feat_names = sorted(feat_names)
+    C_arr = np.asarray(C)
+    assert C_arr.shape == (len(feat_names), len(feat_names))
 
-    G = DiGraph() if directed else Graph()
-    G.add_nodes_from(C.index)
+    # 1) threshold edges
+    i, j = np.triu_indices_from(C_arr, k=1)
+    thresh = np.percentile(C_arr[i, j], percentile)
+    C_thresh = np.zeros_like(C_arr)
+    C_thresh[C_arr >= thresh] = C_arr[C_arr >= thresh]
 
-    if not directed:
-        # as before
-        G.add_weighted_edges_from(edges)
-    else:
-        # for each document, add directed edges in the order they appeared
-        # assuming df_concepts is ordered by doc_index and then by original
-        # sequence
-        for doc, grp in df_concepts.groupby("doc_index"):
-            seq = grp["concept"].tolist()
-            for a, b in zip(seq, seq[1:]):
-                if G.has_edge(a, b):
-                    G[a][b]["weight"] += 1
-                else:
-                    G.add_edge(a, b, weight=1)
+    np.fill_diagonal(C_thresh, 0)
+
+    # 2) build graph, relabel
+    G = nx.from_numpy_array(C_thresh)
+    G = nx.relabel_nodes(G, {i: feat for i, feat in enumerate(feat_names)})
+
     return G
 
 
-def compute_centrality(G: nx.Graph) -> dict:
+def detect_and_filter_communities(
+    G: nx.Graph,
+    min_size: int,
+    seed: int,
+) -> tuple[nx.Graph, set[int], dict[str, int], Counter]:
     """
-    Compute and return degree centrality mapping for G.
+    Run Louvain and drop communities smaller than min_size.
     """
-    return nx.degree_centrality(G)
+    # louvain partition
+    l_partition = community_louvain.best_partition(
+        G,
+        weight="weight",
+        random_state=seed
+    )
+
+    # filter small communities
+    sizes = Counter(l_partition.values())
+    keep = {cid for cid, sz in sizes.items() if sz >= min_size}
+    # fallback keep largest if none
+    if not keep:
+        keep = {sizes.most_common(1)[0][0]}
+    nodes = [n for n, cid in l_partition.items() if cid in keep]
+    G_back = G.subgraph(nodes).copy()
+    partition = {n: l_partition[n] for n in nodes}
+
+    return G_back, keep, partition, sizes
 
 
-def detect_communities(G):
+def compute_all_metrics(
+        G: nx.Graph,
+        weight: str = "weight"
+) -> Dict[str, Dict[str, float]]:
     """
-    Partition G into communities by greedy modularity maximization.
-    Returns a list of frozensets (each set is one community).
+    Compute a suite of centrality scores on G.
+
+    Returns a dict of metric_name -> { node: score, ... }.
     """
-    return list(greedy_modularity_communities(G, weight="weight"))
+    pr = nx.pagerank(G, weight=weight)
+    bc = nx.betweenness_centrality(G, weight=weight)
+    ev = nx.eigenvector_centrality(G, weight=weight)
+    dc = nx.degree_centrality(G)
 
-
-def node_to_community_map(communities):
-    return {node: ci for ci, comm in enumerate(communities) for node in comm}
+    return {
+        "pagerank": pr,
+        "betweenness": bc,
+        "eigenvector": ev,
+        "degree": dc,
+    }
 
 
 class SemanticGraph:
-    def __init__(self, df_concepts, threshold=1):
-        self.M, self.C, self.edges = compute_cooccurrence(df_concepts,
-                                                          threshold)
-        self.G = build_semantic_graph(df_concepts, threshold)
-        self.metrics = compute_centrality(self.G)
-        self.communities = detect_communities(self.G)
-        self.comm_map = node_to_community_map(self.communities)
+    def __init__(
+        self,
+        df_concepts: pd.DataFrame,
+        threshold_count: int = 1,
+        percentile: float = 99,
+        min_comm_size: int = 9,
+        seed: int = 42,
+    ):
+        # Raw co-occurrence matrix
+        self.M, self.C, self.edges = compute_cooccurrence(
+            df_concepts,
+            threshold_count
+        )
+        self.feat_names = sorted(df_concepts['concept'].unique())
+
+        # Build undirected backbone by percentile only
+        self.G_und = threshold_undirected_graph(
+            self.C,
+            self.feat_names,
+            percentile=percentile,
+        )
+
+        # Detect and filter communities
+        (
+            self.G,
+            self.keep,
+            self.partition,
+            self.sizes
+        ) = detect_and_filter_communities(self.G_und, min_comm_size, seed)
+
+        # Compute centrality metrics on the filtered graph
+        self.metrics = compute_all_metrics(self.G)
+
+        # Store parameters
+        self.percentile = percentile
+        self.min_comm_size = min_comm_size
+        self.seed = seed

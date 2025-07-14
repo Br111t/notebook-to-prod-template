@@ -36,6 +36,10 @@ dependencies = [
   "python-dotenv>=1.1.1",         # if you load .env files in main or elsewhere
   "scikit-learn==1.7.0",
 
+  # Community detection & text‐adjustment (needed at runtime!)
+  "python-louvain>=0.16",
+  "adjustText>=0.8",
+
   # IBM Watson SDK
   "ibm-watson==10.0.0",
   "ibm-cloud-sdk-core>=3.0",    # pin a minimum version

@@ -1,146 +1,145 @@
-from typing import Tuple
+from collections import Counter
 
+import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
 import networkx as nx
+import numpy as np
+from adjustText import adjust_text
+from scipy.spatial import ConvexHull
 
 
-def visualize_graph(
+def plot_louvain_communities(
     G: nx.Graph,
+    comms: set[int],
+    partition: dict[str, int],
+    sizes: Counter,
     *,
-    metrics: dict | None = None,
-    comm_map: dict | None = None,
+    pos: dict[str, tuple[float, float]] | None = None,
     layout: str = "spring",
     layout_kwargs: dict = None,
-    node_size_by: str = "degree",
-    size_scale: float = 100,
-    node_color_by: str | None = None,
-    cmap: str = "tab10",
-    edge_threshold: int | None = None,
-    edge_width_scale: float = 0.3,
-    show_edge_labels: bool = False,
-    node_labels: bool = True,
-    figsize: Tuple[int, int] = (8, 6),
-    title: str | None = None,
-    title_fontsize: float | None = None,
-    title_fontweight: str = 'normal',
-    title_fontfamily: str = 'sans-serif',
-    title_loc: str = 'center',
-    title_pad: float | None = None,
-    ax: plt.Axes = None
+    seed: int,
+    min_size: int,
+    percentile: float = 99,
+    metrics: dict[str, float] | None = None,
+    size_by: str | None = None,
+    size_scale: float = 200,
+    alpha: float = 0.2,
+    facecolor: str = "#f9f9f9",
+    figsize: tuple[int, int] = (10, 8),
 ) -> plt.Figure:
+
     """
-    Draws a NetworkX graph with various customization options.
+    Render a spring-layout Louvain community plot.
 
-    Parameters:
-    - G: The NetworkX graph to visualize.
-    - metrics: Optional dict of node metrics (e.g., centrality measures).
-    - comm_map: Optional mapping of nodes to community indices.
-    - layout: Layout algorithm to use.
-    - layout_kwargs: Arguments for the layout function.
-    - node_size_by: Metric name to scale node sizes.
-    - size_scale: Scaling factor for node sizes.
-    - node_color_by: Metric or 'community' to color nodes.
-    - cmap: Colormap for categorical coloring.
-    - edge_threshold: Minimum weight for edges to display.
-    - edge_width_scale: Factor for edge width scaling.
-    - show_edge_labels: Whether to label edges with weights.
-    - node_labels: Whether to display node names.
-    - figsize: Figure size.
-    - title: Optional title for the plot.
-    - ax: Pre-existing Matplotlib Axes to draw on.
+    Parameters
+    ----------
+    G         : nx.Graph, the filtered subgraph of interest
+    comms     : set of community IDs kept (>= min_size)
+    partition : mapping node -> community ID
+    sizes     : Counter of community sizes (for legend)
+    seed      : random seed for layout
+    min_size  : minimum community size that was kept (for titling)
+    percentile: percentile used to threshold edges (for title)
+    metrics   : optional mapping node -> metric value for sizing
+    size_by   : label of metric used for sizing (for reference)
+    size_scale: multiplicative factor for node sizing
+    alpha     : change the color of community fill
+    background: change the color of graph background
+    figsize   : output figure size
 
-    Returns:
-    - Matplotlib Figure object.
     """
-    # Prepare layout kwargs, stripping unsupported keys based on algorithm
-    layout_kwargs = layout_kwargs.copy() if layout_kwargs else {}
-    if layout == "spring":
-        # spring_layout accepts e.g. k, seed, weight
-        pos = nx.spring_layout(G, **layout_kwargs)
-    elif layout == "kamada_kawai":
-        # kamada_kawai_layout does not accept 'seed' or 'k'
-        layout_kwargs.pop('seed', None)
-        layout_kwargs.pop('k', None)
-        pos = nx.kamada_kawai_layout(G, **layout_kwargs)
-    elif layout == "circular":
-        # circular_layout is deterministic; remove seed/k if present
-        layout_kwargs.pop('seed', None)
-        layout_kwargs.pop('k', None)
-        pos = nx.circular_layout(G, **layout_kwargs)
-    else:
-        # fallback to spring
-        pos = nx.spring_layout(G, **layout_kwargs)
 
-    # Prepare figure and axes
-    if ax is None:
-        fig, ax = plt.subplots(figsize=figsize)
-    else:
-        fig = ax.figure
+    # Prepare layout
+    fig, ax = plt.subplots(figsize=figsize)
 
-    # Filter edges by threshold
-    edges = G.edges(data=True)
-    if edge_threshold is not None:
-        edges = [(u, v, d) for u, v,
-                 d in edges if d.get('weight', 1) >= edge_threshold]
+    # set the overall plot background
+    fig.patch.set_facecolor(facecolor)
+    ax.set_facecolor(facecolor)
 
-    # Draw edges
-    for u, v, d in edges:
-        weight = d.get('weight', 1)
-        ax.plot(
-            [pos[u][0], pos[v][0]],
-            [pos[u][1], pos[v][1]],
-            linewidth=weight * edge_width_scale,
-            color='gray'
+    # Compute positions
+    if pos is None:
+        layout_kwargs = layout_kwargs or {}
+        if layout == "spring":
+            pos = nx.spring_layout(G, seed=seed, **layout_kwargs)
+        elif layout == "kamada_kawai":
+            pos = nx.kamada_kawai_layout(G, **layout_kwargs)
+        elif layout == "circular":
+            pos = nx.circular_layout(G, **layout_kwargs)
+        else:
+            raise ValueError(f"Unknown layout: {layout}")
+
+    cmap = plt.get_cmap("tab20")
+
+    # Convex hull per community
+    for cid in sorted(comms):
+        pts = np.array([pos[n] for n, c in partition.items() if c == cid])
+        if pts.shape[0] < 3:
+            continue
+        hull = ConvexHull(pts)
+        poly = plt.Polygon(
+            pts[hull.vertices],
+            facecolor=cmap(cid),
+            alpha=alpha,
+            edgecolor=None,
+            zorder=1
         )
+        ax.add_patch(poly)
+        poly.set_transform(ax.transData)
 
-    # Node sizes
-    if node_size_by and metrics:
-        sizes = [metrics.get(node, 0) * size_scale for node in G.nodes()]
+    # Draw edges underneath nodes
+    edge_coll = nx.draw_networkx_edges(
+       G, pos,
+       alpha=0.3,
+       edge_color="gray",
+       ax=ax
+       )
+    # bump the edges into the correct stacking order
+    edge_coll.set_zorder(2)
+
+    # Compute node sizes & draw nodes
+    if size_by and metrics and size_by in metrics:
+        vals = metrics[size_by]
+        node_sizes = [vals.get(n, 0) * size_scale for n in G.nodes()]
     else:
-        sizes = [size_scale for _ in G.nodes()]
+        node_sizes = [size_scale for _ in G.nodes()]
 
-    # Node colors
-    if node_color_by == 'community' and comm_map:
-        colors = [comm_map.get(node, 0) for node in G.nodes()]
-    elif node_color_by and metrics:
-        colors = [metrics.get(node, 0) for node in G.nodes()]
-    else:
-        colors = None
-
-    # Draw nodes
-    nx.draw_networkx_nodes(
-        G,
-        pos,
-        node_size=sizes,
-        node_color=colors,
-        cmap=plt.get_cmap(cmap),
+    # Draw nodes colored by community
+    node_coll = nx.draw_networkx_nodes(
+        G, pos,
+        node_color=[partition[n] for n in G.nodes()],
+        cmap=cmap,
+        node_size=node_sizes,
         ax=ax
+        )
+    node_coll.set_zorder(3)
+
+    # after drawing nodes & edges:
+    texts = [ax.text(*pos[n], n, fontsize=8) for n in G.nodes()]
+    adjust_text(texts, ax=ax,
+                arrowprops=dict(arrowstyle='-', alpha=0.2),
+                expand_text=(1.2, 1.2),
+                force_text=0.5)
+
+    # Legend: community IDs and sizes
+    patches = [
+        mpatches.Patch(color=cmap(cid),
+                       label=f"Community {cid} ({sizes[cid]} nodes)")
+        for cid in sorted(comms)
+    ]
+    ax.legend(
+        handles=patches,
+        title=f"Louvain (min_size={min_size})",
+        bbox_to_anchor=(1.02, 1),
+        loc="upper left"
     )
 
-    # Draw labels
-    if node_labels:
-        nx.draw_networkx_labels(G, pos, ax=ax)
-
-    # Edge labels
-    if show_edge_labels:
-        nx.draw_networkx_edge_labels(
-            G,
-            pos,
-            edge_labels={(u, v): f"{d.get('weight', 1):.2f}"
-                         for u, v, d in edges},
-            ax=ax
-        )
-
-    # Set title if provided
-    if title:
-        title_kwargs = {}
-        if title_fontsize is not None:
-            title_kwargs['fontsize'] = title_fontsize
-        if title_fontweight:
-            title_kwargs['fontweight'] = title_fontweight
-        if title_fontfamily:
-            title_kwargs['fontfamily'] = title_fontfamily
-        ax.set_title(title, loc=title_loc, pad=title_pad, **title_kwargs)
-
+    # Title including threshold info
+    ax.set_title(
+        f"Louvain Communities (≥{min_size} nodes, " +
+        "top {100-percentile:.1f}% edges)",
+        fontsize=16
+    )
     ax.axis('off')
+    plt.tight_layout()
+
     return fig
