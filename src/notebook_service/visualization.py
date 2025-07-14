@@ -116,7 +116,6 @@ def plot_louvain_communities(
     # after drawing nodes & edges:
     texts = [ax.text(*pos[n], n, fontsize=8) for n in G.nodes()]
     adjust_text(texts, ax=ax,
-                arrowprops=dict(arrowstyle='-', alpha=0.2),
                 expand_text=(1.2, 1.2),
                 force_text=0.5)
 
