@@ -91,10 +91,16 @@ jobs:
       - name: Run smoke test (mock NLU)
         if: github.ref != 'refs/heads/main'
         run: |
-          docker run -d -p 8000:8000 --rm \
+          docker run -d --name app -p 8000:8000 --rm \
             --env DEV_MODE=true \
-            --name app notebook-to-prod:ci
-          sleep 5
+            notebook-to-prod:ci
+          for i in $(seq 1 10); do
+            if curl --fail http://localhost:8000/health; then
+              break
+            fi
+            echo "Waiting for app…"
+            sleep 1
+          done
           echo "🪵 Container logs:"
           docker logs app
           echo "🌐 Hitting endpoint:"
@@ -104,12 +110,18 @@ jobs:
       - name: Run smoke test (real Watson NLU)
         if: github.ref == 'refs/heads/main'
         run: |
-          docker run -d -p 8000:8000 --rm \
+          docker run -d --name app -p 8000:8000 --rm \
             --env NLU_APIKEY="${{ secrets.NLU_APIKEY }}" \
             --env NLU_URL="${{ secrets.NLU_URL }}" \
             --env DEV_MODE=false \
-            --name app notebook-to-prod:ci
-          sleep 5
+            notebook-to-prod:ci
+          for i in $(seq 1 10); do
+            if curl --fail http://localhost:8000/health; then
+              break
+            fi
+            echo "Waiting for app…"
+            sleep 1
+          done
           echo "🪵 Container logs:"
           docker logs app
           echo "🌐 Hitting endpoint:"
