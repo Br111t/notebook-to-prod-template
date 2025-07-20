@@ -52,20 +52,30 @@ jobs:
       - name: Lint and format (pre-commit)
         run: pre-commit run --all-files --hook-stage manual
 
-      # 7️⃣  Tests + coverage
-      - name: Run tests with coverage
-        run: |
-          pytest \
-            --cov=notebook_service \
-            --cov-report=term-missing \
-            --cov-config=.coveragerc \
-            -q
+      # 7️⃣ Cache pytest’s own cache directory
+      - name: Cache pytest cache
+        uses: actions/cache@v4
+        with:
+          path: .pytest_cache
+          key: ${{ runner.os }}-pytest-${{ hashFiles('**/pytest.ini') }}
 
-      # 8️⃣  Build Docker image (optional artifact)
+      # 8️⃣  Tests + coverage
+      - name: Run tests with coverage
+        run: pytest -q
+
+      # 9️⃣  Add coverage to repo
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          files: coverage.xml            # add `--cov-report=xml` above if you need it
+          flags: unittests
+          fail_ci_if_error: true
+
+      # 🔟  Build Docker image (optional artifact)
       - name: Build Docker image
         run: docker build . --tag notebook-to-prod:ci
 
-      # 9️⃣  Check that secrets are passed (partial echo)
+      # 11️⃣  Check that secrets are passed (partial echo)
       - name: Check that secrets are passed (partial echo)
         run: |
           echo "NLU_APIKEY starts with: ${NLU_APIKEY:0:6}******"
@@ -74,7 +84,7 @@ jobs:
           NLU_APIKEY: ${{ secrets.NLU_APIKEY }}
           NLU_URL: ${{ secrets.NLU_URL }}
 
-      # 🔟  Run smoke test (mock NLU)
+      # 12️⃣  Run smoke test (mock NLU)
       - name: Run smoke test (mock NLU)
         if: github.ref != 'refs/heads/main'
         run: |
@@ -87,7 +97,7 @@ jobs:
           echo "🌐 Hitting endpoint:"
           curl -v http://localhost:8000/run/example
 
-      # 🌟 11️⃣ Run smoke test (real Watson NLU)
+      # 🌟 13️⃣ Run smoke test (real Watson NLU)
       - name: Run smoke test (real Watson NLU)
         if: github.ref == 'refs/heads/main'
         run: |
