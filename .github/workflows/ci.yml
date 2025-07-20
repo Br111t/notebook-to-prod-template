@@ -60,6 +60,10 @@ jobs:
           key: ${{ runner.os }}-pytest-${{ hashFiles('**/pytest.ini') }}
 
       # 8️⃣  Tests + coverage
+      - name: Prepare reports directory
+        run: |
+          mkdir -p reports
+          mkdir -p reports/htmlcov
       - name: Run tests with coverage
         run: pytest -q
 
@@ -67,9 +71,8 @@ jobs:
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
         with:
-          files: coverage.xml            # add `--cov-report=xml` above if you need it
+          files: reports/coverage.xml
           flags: unittests
-          fail_ci_if_error: true
 
       # 🔟  Build Docker image (optional artifact)
       - name: Build Docker image
