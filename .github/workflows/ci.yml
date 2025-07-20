@@ -52,20 +52,33 @@ jobs:
       - name: Lint and format (pre-commit)
         run: pre-commit run --all-files --hook-stage manual
 
-      # 7️⃣  Tests + coverage
-      - name: Run tests with coverage
-        run: |
-          pytest \
-            --cov=notebook_service \
-            --cov-report=term-missing \
-            --cov-config=.coveragerc \
-            -q
+      # 7️⃣ Cache pytest’s own cache directory
+      - name: Cache pytest cache
+        uses: actions/cache@v4
+        with:
+          path: .pytest_cache
+          key: ${{ runner.os }}-pytest-${{ hashFiles('**/pytest.ini') }}
 
-      # 8️⃣  Build Docker image (optional artifact)
+      # 8️⃣  Tests + coverage
+      - name: Prepare reports directory
+        run: |
+          mkdir -p reports
+          mkdir -p reports/htmlcov
+      - name: Run tests with coverage
+        run: pytest -q
+
+      # 9️⃣  Add coverage to repo
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          files: reports/coverage.xml
+          flags: unittests
+
+      # 🔟  Build Docker image (optional artifact)
       - name: Build Docker image
         run: docker build . --tag notebook-to-prod:ci
 
-      # 9️⃣  Check that secrets are passed (partial echo)
+      # 11️⃣  Check that secrets are passed (partial echo)
       - name: Check that secrets are passed (partial echo)
         run: |
           echo "NLU_APIKEY starts with: ${NLU_APIKEY:0:6}******"
@@ -74,29 +87,41 @@ jobs:
           NLU_APIKEY: ${{ secrets.NLU_APIKEY }}
           NLU_URL: ${{ secrets.NLU_URL }}
 
-      # 🔟  Run smoke test (mock NLU)
+      # 12️⃣  Run smoke test (mock NLU)
       - name: Run smoke test (mock NLU)
         if: github.ref != 'refs/heads/main'
         run: |
-          docker run -d -p 8000:8000 --rm \
+          docker run -d --name app -p 8000:8000 --rm \
             --env DEV_MODE=true \
-            --name app notebook-to-prod:ci
-          sleep 5
+            notebook-to-prod:ci
+          for i in $(seq 1 10); do
+            if curl --fail http://localhost:8000/health; then
+              break
+            fi
+            echo "Waiting for app…"
+            sleep 1
+          done
           echo "🪵 Container logs:"
           docker logs app
           echo "🌐 Hitting endpoint:"
           curl -v http://localhost:8000/run/example
 
-      # 🌟 11️⃣ Run smoke test (real Watson NLU)
+      # 🌟 13️⃣ Run smoke test (real Watson NLU)
       - name: Run smoke test (real Watson NLU)
         if: github.ref == 'refs/heads/main'
         run: |
-          docker run -d -p 8000:8000 --rm \
+          docker run -d --name app -p 8000:8000 --rm \
             --env NLU_APIKEY="${{ secrets.NLU_APIKEY }}" \
             --env NLU_URL="${{ secrets.NLU_URL }}" \
             --env DEV_MODE=false \
-            --name app notebook-to-prod:ci
-          sleep 5
+            notebook-to-prod:ci
+          for i in $(seq 1 10); do
+            if curl --fail http://localhost:8000/health; then
+              break
+            fi
+            echo "Waiting for app…"
+            sleep 1
+          done
           echo "🪵 Container logs:"
           docker logs app
           echo "🌐 Hitting endpoint:"
