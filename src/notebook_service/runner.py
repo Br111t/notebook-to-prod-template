@@ -40,42 +40,47 @@ def run_notebook(path: str):
 
     # Load & execute
     nb = nbformat.read(nb_path, as_version=4)
+    exec_kwargs = {
+        "kernel_name": "python3",
+        "cwd": str(nb_path.parent),
+    }
     executed_nb = execute(
         nb,
-        kernel_name="python3",
-        cwd=str(nb_path.parent),  # run from the notebook’s folder
+        **exec_kwargs
     )
 
     # Structured objects with type and data
     collected: list[dict] = []
+    allowed_mimes = {
+        "text/plain",
+        "application/json",
+        "text/csv",
+        "image/png",
+    }
+
     for idx, cell in enumerate(executed_nb.cells, start=1):
         for out in cell.get("outputs", []):
-            ot = out["output_type"]
+            ot = out.get("output_type")
+
             if ot == "stream":
-                collected.append(
-                    {"cell": idx,
-                     "type": ot,
-                     "data": out["text"]})
-            else:
-                txt = out["data"].get("text/plain")
-                if txt:
-                    collected.append(
-                        {"cell": idx,
-                         "type": ot,
-                         "data": txt})
+                collected.append({
+                    "cell": idx,
+                    "type": ot,
+                    "mime": "text/plain",
+                    "data": out.get("text", "")
+                })
+                continue
+
+            if ot in ("execute_result", "display_data"):
+                data_dict = out.get("data") or {}
+                for mime_type, content in data_dict.items():
+                    if mime_type not in allowed_mimes:
+                        continue
+                    collected.append({
+                        "cell": idx,
+                        "type": ot,
+                        "mime": mime_type,
+                        "data": content
+                    })
 
     return {"outputs": collected}
-
-
-# def run_full_analysis(path: str, threshold=1):
-#     df = load_data(path)
-#     # assume df has ['doc_index','concept']
-#     G = build_semantic_graph(df, threshold)
-#     cent = compute_centrality(G)
-#     comms = detect_communities(G)
-#     comm_map = node_to_community_map(comms)
-#     return {
-#         "graph": G,
-#         "centrality": cent,
-#         "communities": comm_map
-#     }

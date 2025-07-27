@@ -105,21 +105,23 @@ py -m venv .venv
 source .venv/bin/activate
 # Windows PowerShell
 .\.venv\Scripts\Activate.ps1      # Execution-policy error?  ➜  Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned
-
-
-# register your venv as a jupyter kernel
-# with your .venv activated:
-py -m ipykernel install --sys-prefix --name notebook-to-prod --display-name "Python (notebook-to-prod)"
-
 ```
-Then in VS Code’s notebook kernel picker choose Python (notebook-to-prod)
 
+#### with your .venv activated:
 ```bash
 # 2) Install the project  ➜  core + dev extras (pytest, flake8, nbqa, …)
 py -m pip install --upgrade pip setuptools
 pip install -e ".[dev]"
 pip-audit
 ```
+
+#### register your venv as a jupyter kernel
+```bash
+py -m ipykernel install --sys-prefix --name notebook-to-prod --display-name "Python (notebook-to-prod)"
+```
+Then in VS Code’s notebook kernel picker choose Python (notebook-to-prod)
+pip
+
 ```bash
 # 3) Lint & format (pre-commit runs every hook once)
 pre-commit run --all-files

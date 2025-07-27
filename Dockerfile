@@ -34,26 +34,31 @@ RUN pip install --upgrade pip \
 ############################
 FROM python:3.11-slim
 
+WORKDIR /app
+ENV NOTEBOOK_DIR=/app/notebooks
+ENV PYTHONPATH=/app/src
+
 # Install runtime deps
 RUN apt-get update -y \
  && apt-get install -y --no-install-recommends git curl \
  && rm -rf /var/lib/apt/lists/*
 
-WORKDIR /app
+# Run as non-root for safety
+RUN useradd --create-home appuser
+USER appuser
 
 # Pull in the installed package and its requirements
 COPY --from=builder /usr/local/lib/python3.11/site-packages/ /usr/local/lib/python3.11/site-packages/
 
 # Copy your application code and notebooks
-COPY notebooks/ notebooks/
+COPY src/ /app/src
+COPY notebooks/ /app/notebooks/
+COPY data/ /app/data/
+COPY --chown=appuser:appuser data/ /app/data/
 
 # Healthcheck for smoke‐tests
 HEALTHCHECK --interval=30s --timeout=5s \
   CMD curl -f http://localhost:8000/health || exit 1
-
-# Run as non-root for safety
-RUN useradd --create-home appuser
-USER appuser
 
 EXPOSE 8000
 CMD ["python", "-m", "uvicorn", "notebook_service.main:app", "--host", "0.0.0.0", "--port", "8000", "--loop", "asyncio"]

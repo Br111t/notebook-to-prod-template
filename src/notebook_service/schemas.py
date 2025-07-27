@@ -1,5 +1,6 @@
 # app/schemas.py
 from enum import Enum
+from typing import Any
 
 from pydantic import BaseModel
 
@@ -13,7 +14,8 @@ class OutputType(str, Enum):
 class CellOutput(BaseModel):
     cell: int
     type: OutputType
-    data: str
+    mime: str
+    data: Any
 
 
 class NotebookOutputs(BaseModel):

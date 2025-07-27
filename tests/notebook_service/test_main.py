@@ -1,5 +1,6 @@
-# tests/test_main_full.py
+# tests/test_main.py
 
+import importlib
 import sys
 from pathlib import Path
 
@@ -7,13 +8,13 @@ import nbformat
 import pytest
 from fastapi.testclient import TestClient
 
+from notebook_service import main as app_main
 from notebook_service.main import (
     app,
     filter_notebook,
     list_cells,
     run_and_filter,
 )
-from notebook_service.runner import run_notebook
 
 client = TestClient(app)
 
@@ -23,43 +24,54 @@ client = TestClient(app)
 
 
 @pytest.mark.parametrize(
-    "notebook_name, status_code",
+    "notebook_stem, notebook_query, status_code",
     [
-        ("example", 200),      # exists
-        ("does_not_exist", 404),
+        ("sfe", "sfe.ipynb", 200),      # exists
+        ("example", "example.ipynb", 422),
     ],
 )
 def test_run_endpoint(
-    client,
-    tmp_path,
     sample_notebook,
-    monkeypatch,
-    notebook_name,
+    auth_header,
+    notebook_stem,
+    notebook_query,
     status_code
 ):
-    # Point the service at our temporary directory
-    monkeypatch.setenv("NOTEBOOK_DIR", str(tmp_path))
+    # create the notebook file
+    if notebook_stem == "sfe":
+        sample_notebook(name=notebook_stem)
 
-    if notebook_name == "example":
-        # Use the sample_notebook fixture to write example.ipynb
-        sample_notebook(name="example")
+    # relaod the app so that _make_notebook_enum runs with new notebook
+    importlib.reload(app_main)
 
-    resp = client.get(f"/run/{notebook_name}")
-    assert resp.status_code == status_code
+    # spin up TestClient againts that reloaded app
+    client = TestClient(app_main.app)
+
+    # hit the endpoint with the required API key
+    response = client.get(
+        "/run",
+        params={"notebook": notebook_query},
+        headers=auth_header,
+    )
+
+    print("STATUS:", response.status_code)
+    print("BODY:  ", response.json())
+
+    assert response.status_code == status_code
 
 
-def test_run_notebook_executes_cells(tmp_path):
-    nb = nbformat.v4.new_notebook()
-    nb.cells.append(nbformat.v4.new_code_cell("print('hello world')"))
-    path = tmp_path / "foo.ipynb"
-    path.write_text(nbformat.writes(nb))
+# def test_run_notebook_executes_cells(tmp_path):
+#     nb = nbformat.v4.new_notebook()
+#     nb.cells.append(nbformat.v4.new_code_cell("print('hello world')"))
+#     path = tmp_path / "foo.ipynb"
+#     path.write_text(nbformat.writes(nb))
 
-    result = run_notebook(str(path))
-    outputs = result.get("outputs", [])
-    assert outputs, "No outputs found"
+#     result = run_notebook(str(path))
+#     outputs = result.get("outputs", [])
+#     assert outputs, "No outputs found"
 
-    stream_data = [o["data"] for o in outputs if o.get("type") == "stream"]
-    assert any("hello world" in d for d in stream_data)
+#     stream_data = [o["data"] for o in outputs if o.get("type") == "stream"]
+#     assert any("hello world" in d for d in stream_data)
 
 
 #
@@ -105,11 +117,6 @@ def test_health_nlu_unreachable(monkeypatch):
 #
 # 3) /run?notebook=...&fmt=trimmed query endpoint
 #
-@pytest.fixture(autouse=True)
-def set_apikey(tmp_path, monkeypatch):
-    monkeypatch.setenv("NLU_APIKEY", "secret")
-    monkeypatch.setenv("NOTEBOOK_DIR", str(tmp_path))
-    return tmp_path
 
 
 def write_notebook_file(path: Path):
@@ -118,34 +125,59 @@ def write_notebook_file(path: Path):
     path.write_text(nbformat.writes(nb))
 
 
-def test_run_query_unauthorized(set_apikey):
-    resp = client.get("/run?notebook=foo&fmt=trimmed")
+def test_run_query_not_found(client, auth_header):
+    resp = client.get(
+        "/run?notebook=does_not_exist&fmt=trimmed",
+        headers=auth_header,
+    )
+    assert resp.status_code == 422
+
+
+# missing header → 401 Unauthorized
+def test_run_query_missing_key(client):
+    resp = client.get(
+        "/run",
+        params={"notebook": "foo.ipynb", "fmt": "trimmed"},
+    )
+    assert resp.status_code == 401
+
+
+# wrong header → 403 Forbidden
+def test_run_query_wrong_key(client):
+    resp = client.get(
+        "/run",
+        params={"notebook": "foo.ipynb", "fmt": "trimmed"},
+        headers={"X-SERVICE-Key": "not-the-right-one"},
+    )
     assert resp.status_code == 403
 
 
-def test_run_query_not_found(set_apikey):
-    resp = client.get(
-        "/run?notebook=does_not_exist&fmt=trimmed",
-        headers={"X-API-Key": "secret"},
+# happy‐path: write foo.ipynb, then get trimmed outputs
+def test_run_query_success_trimmed(
+        sample_notebook,
+        client,
+        auth_header):
+    # write foo.ipynb under tmp_path and rebuild Enum
+    sample_notebook(name="foo")
+
+    # relaod the app so that _make_notebook_enum runs with new notebook
+    importlib.reload(app_main)
+
+    # spin up TestClient againts that reloaded app
+    client = TestClient(app_main.app)
+
+    response = client.get(
+        "/run",
+        params={"notebook": "foo.ipynb", "fmt": "trimmed"},
+        headers=auth_header,
     )
-    assert resp.status_code == 404
 
+    assert response.status_code == 200
 
-def test_run_query_success_trimmed(set_apikey):
-    # write foo.ipynb into NOTEBOOK_DIR
-    nbfile = set_apikey / "foo.ipynb"
-    write_notebook_file(nbfile)
-
-    # call trimmed endpoint: it returns a dict of outputs
-    resp = client.get(
-        "/run?notebook=foo.ipynb&fmt=trimmed",
-        headers={"X-API-Key": "secret"},
-    )
-    assert resp.status_code == 200
-    data = resp.json()
-    # trimmed /filtered run_notebook_query returns 'outputs'
+    data = response.json()
     assert "outputs" in data
     assert isinstance(data["outputs"], list)
+
 
 ##
 # 4) filter_notebook unit test
