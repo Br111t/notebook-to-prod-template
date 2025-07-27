@@ -2,6 +2,7 @@
 
 import importlib
 import sys
+import types
 from pathlib import Path
 
 import nbformat
@@ -78,37 +79,48 @@ def test_run_endpoint(
 # 2) /health endpoint
 #
 
+# Helper to build a fresh client after reloading main_mod
+def make_test_client():
+    importlib.reload(app_main)
+    return TestClient(app_main.app)
+
+
 def test_health_ok(monkeypatch):
+    # 1) DEV_MODE=false so we *do* hit NLU check
     monkeypatch.setenv("DEV_MODE", "false")
-    # Ensure NLU_CLIENT importable
 
-    class Dummy:
-        pass
-    monkeypatch.setattr(
-        "notebook_service.emotion.NLU_CLIENT",
-        Dummy,
-        raising=False
-    )
+    # 2) Ensure NLU_CLIENT exists on the real module
+    import notebook_service.emotion as emotion_mod
+    monkeypatch.setattr(emotion_mod, "NLU_CLIENT", object(), raising=False)
 
+    # 3) Reload and remake the client
+    client = make_test_client()
+
+    # 4) Call /health — should skip the exception and return 200
     resp = client.get("/health")
     assert resp.status_code == 200
+
     body = resp.json()
     assert body["status"] == "ok"
     assert isinstance(body["uptime_seconds"], int)
     from notebook_service import __version__
     assert body["version"] == __version__
+    assert body.get("nlu") == "reachable"
 
 
 def test_health_nlu_unreachable(monkeypatch):
+    # 1) DEV_MODE=false so we *do* hit NLU check
     monkeypatch.setenv("DEV_MODE", "false")
-    # Force an error when accessing NLU_CLIENT
-    monkeypatch.setitem(sys.modules, "notebook_service.emotion", {})
-    monkeypatch.setattr(
-        "notebook_service.emotion.NLU_CLIENT",
-        property(lambda _: (_ for _ in ()).throw(RuntimeError("down"))),
-        raising=False,
-    )
 
+    # 2) Remove the real module and insert a blank one
+    sys.modules.pop("notebook_service.emotion", None)
+    fake = types.ModuleType("notebook_service.emotion")
+    sys.modules["notebook_service.emotion"] = fake
+
+    # 3) Reload & remake the client /health picks up our fake
+    client = make_test_client()
+
+    # 4) Call /health — now the import fails and you get 503
     resp = client.get("/health")
     assert resp.status_code == 503
     assert "NLU error" in resp.json()["detail"]

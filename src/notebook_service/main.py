@@ -75,11 +75,15 @@ async def health():
     result["uptime_seconds"] = int(time.time() - start_time)
     from notebook_service import __version__
     result["version"] = __version__
-    if os.getenv("DEV_MODE", "false") == "false":
-        try:
-            result["nlu"] = "reachable"
-        except Exception as e:
-            raise HTTPException(status_code=503, detail=f"NLU error: {e}")
+    try:
+        from notebook_service.emotion import NLU_CLIENT
+        NLU_CLIENT
+        result["nlu"] = "reachable"
+    except Exception as e:
+        raise HTTPException(
+            status_code=503,
+            detail=f"NLU error: {e}"
+        )
     return result
 
 
