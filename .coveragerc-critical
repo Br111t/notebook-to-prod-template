@@ -1,0 +1,9 @@
+[run]
+# restrict measurement to just these two files
+source =
+    src/notebook_service/runner.py
+    src/notebook_service/graph_builder.py
+
+[report]
+show_missing = True
+fail_under = 90

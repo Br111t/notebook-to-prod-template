@@ -2,9 +2,7 @@ import os
 from typing import Any, Dict, List, Tuple
 
 import pandas as pd
-from dotenv import load_dotenv
 
-load_dotenv()
 DEV_MODE = os.getenv("DEV_MODE", "false").lower() == "true"
 
 if DEV_MODE:

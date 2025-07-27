@@ -1,4 +1,4 @@
-# src/cli.py
+# notebook_service/cli.py
 from typing import Optional
 
 import pandas as pd
