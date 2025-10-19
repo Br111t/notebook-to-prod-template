@@ -1,0 +1,50 @@
+# Default values for notebook-execution-service.
+
+replicaCount: 2
+
+image:
+  repository: your-registry/notebook-execution-service
+  pullPolicy: IfNotPresent
+  # tag is overridden on install/CI; defaults to appVersion
+  tag: ""
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8000   # your container’s listening port
+
+env:
+  # Pass through any environment variables your app needs
+  DEV_MODE: "false"
+
+secrets:
+  SERVICE_APIKEY: "changeme"
+  NLU_APIKEY: "changeme"
+  NLU_URL: "https://api.example.com/nlu"
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 250m
+    memory: 256Mi
+
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+  hosts:
+    - host: notebook.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+persistence:
+  enabled: true
+  size: 1Gi
+  accessModes: ["ReadWriteOnce"]
+  storageClassName: ""   # Use default storage class
+  mountPath: /app/data/processed

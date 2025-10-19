@@ -1,4 +1,4 @@
-name: CI
+name: CI + Helm Deploy
 
 on:
   push:
@@ -37,7 +37,7 @@ jobs:
       # 4️⃣  Install deps (core + dev)
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip setuptools
+          python -m pip install --upgrade pip setuptools wheel
           pip install -e ".[dev]"
 
       # 5️⃣  Restore cached pre-commit hook environments
@@ -157,3 +157,51 @@ jobs:
                http://localhost:8000/processed/extracted_features.json
 
           docker rm -f $CONTAINER_ID
+
+  # 14️⃣ Optional: Helm dry-run (feature branches only)
+  helm-dry-run:
+    needs: build-and-test
+    if: github.ref != 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.14.0
+      - name: Helm template dry-run
+        env:
+          SERVICE_APIKEY: ${{ secrets.SERVICE_APIKEY }}
+          NLU_APIKEY: ${{ secrets.NLU_APIKEY }}
+          NLU_URL: ${{ secrets.NLU_URL }}
+        run: |
+          helm template nes ./notebook-execution-service \
+            --set secrets.SERVICE_APIKEY=$SERVICE_APIKEY \
+            --set secrets.NLU_APIKEY=$NLU_APIKEY \
+            --set secrets.NLU_URL=$NLU_URL \
+            --set persistence.enabled=true \
+            --set persistence.mountPath=/app/data/processed \
+            --dry-run > rendered.yaml
+          echo "✅ Helm chart rendered successfully"
+
+  # 15️⃣ Deploy to Minikube (main only)
+  deploy-to-minikube:
+    needs: build-and-test
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Start Minikube
+        uses: medyagh/setup-minikube@master
+      - name: Deploy via Helm
+        env:
+          SERVICE_APIKEY: ${{ secrets.SERVICE_APIKEY }}
+          NLU_APIKEY: ${{ secrets.NLU_APIKEY }}
+          NLU_URL: ${{ secrets.NLU_URL }}
+        run: |
+          helm upgrade --install nes ./notebook-execution-service \
+            --set secrets.SERVICE_APIKEY=$SERVICE_APIKEY \
+            --set secrets.NLU_APIKEY=$NLU_APIKEY \
+            --set secrets.NLU_URL=$NLU_URL
+          kubectl rollout status deploy/nes-notebook-execution-service
+          kubectl get pods -o wide
