@@ -169,3 +169,75 @@ docker exec -it <container_id> pytest
 docker run -p 8000:8000 --env-file .env \
   notebook-to-prod uvicorn notebook_service.main:app --host 0.0.0.0
 ```
+
+## Helm Deploy
+
+Prerequisites
+- Helm v3 installed and a working Kubernetes context (e.g., Minikube, kind, or a cluster).
+- A container image available to the cluster. The chart defaults to `image.repository=notebook-to-prod`, `image.tag=ci`.
+
+Configuration Model
+- Non-secrets: values under `env:` become environment variables via a ConfigMap.
+- Secrets: values under `secrets:` are rendered into a Kubernetes Secret and injected as env vars.
+
+Dry-run (template only)
+```bash
+helm template nes ./notebook-execution-service \
+  --set env.DEV_MODE=true \
+  --set secrets.SERVICE_APIKEY=secret \
+  --set persistence.enabled=true \
+  --set persistence.mountPath=/app/data/processed \
+  --dry-run > rendered.yaml
+```
+
+Install/Upgrade
+```bash
+helm upgrade --install nes ./notebook-execution-service \
+  --set image.repository=notebook-to-prod \
+  --set image.tag=ci \
+  --set image.pullPolicy=IfNotPresent \
+  --set env.DEV_MODE=true \
+  --set secrets.SERVICE_APIKEY=secret \
+  # For real NLU, also set:
+  --set secrets.NLU_APIKEY="$YOUR_NLU_KEY" \
+  --set secrets.NLU_URL="$YOUR_NLU_URL" \
+  --set ingress.enabled=false \
+  --set persistence.enabled=true \
+  --set persistence.mountPath=/app/data/processed
+```
+
+Minikube Example
+```bash
+eval $(minikube -p minikube docker-env)
+docker build -t notebook-to-prod:ci .
+helm upgrade --install nes ./notebook-execution-service \
+  --set image.repository=notebook-to-prod \
+  --set image.tag=ci \
+  --set image.pullPolicy=IfNotPresent \
+  --set env.DEV_MODE=true \
+  --set secrets.SERVICE_APIKEY=secret \
+  --set ingress.enabled=false \
+  --set persistence.enabled=false
+kubectl rollout status deploy/nes-notebook-execution-service --timeout=120s
+```
+
+Ingress and Persistence
+- Enable ingress by setting `ingress.enabled=true` and configure `ingress.hosts[0].host` for your domain.
+- Enable persistence by setting `persistence.enabled=true` and adjust `size`, `storageClassName`, and `mountPath` as needed.
+
+Auth Header
+- Calls to protected endpoints (e.g., `/run`) require the header `X-SERVICE-Key` with a value matching `secrets.SERVICE_APIKEY`.
+
+Troubleshooting
+- Rollout status: `kubectl rollout status deploy/nes-notebook-execution-service`.
+- Logs: `kubectl logs deploy/nes-notebook-execution-service`.
+- Current values: `helm get values nes`.
+
+Chart Files
+- notebook-execution-service/templates/configmap.yaml:1
+- notebook-execution-service/templates/deployment.yaml:1
+- notebook-execution-service/templates/service.yaml:1
+- notebook-execution-service/templates/ingress.yaml:1
+- notebook-execution-service/templates/secret.yaml:1
+- notebook-execution-service/templates/pvc.yaml:1
+- notebook-execution-service/values.yaml:1
