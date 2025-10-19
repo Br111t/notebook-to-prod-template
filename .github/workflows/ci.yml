@@ -187,21 +187,45 @@ jobs:
   # 15️⃣ Deploy to Minikube (main only)
   deploy-to-minikube:
     needs: build-and-test
-    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
     steps:
       - uses: actions/checkout@v4
       - name: Start Minikube
         uses: medyagh/setup-minikube@master
-      - name: Deploy via Helm
+
+      - name: Build image in Minikube docker
+        run: |
+          eval $(minikube -p minikube docker-env)
+          docker build -t notebook-to-prod:ci .
+
+      - name: Helm upgrade/install
+        run: |
+          set -euo pipefail
+          helm upgrade --install nes ./notebook-execution-service \
+            --set image.repository=notebook-to-prod \
+            --set image.tag=ci \
+            --set image.pullPolicy=IfNotPresent \
+            --set secrets.SERVICE_APIKEY=$SERVICE_APIKEY \
+            --set secrets.NLU_APIKEY=$NLU_APIKEY \
+            --set secrets.NLU_URL=$NLU_URL \
+            --set ingress.enabled=false           \
+            --set persistence.enabled=false       # keep CI simple
+          kubectl rollout status deploy/nes-notebook-execution-service --timeout=120s
+          kubectl get pods -o wide
         env:
           SERVICE_APIKEY: ${{ secrets.SERVICE_APIKEY }}
           NLU_APIKEY: ${{ secrets.NLU_APIKEY }}
           NLU_URL: ${{ secrets.NLU_URL }}
+
+      - name: Debug on failure
+        if: failure()
         run: |
-          helm upgrade --install nes ./notebook-execution-service \
-            --set secrets.SERVICE_APIKEY=$SERVICE_APIKEY \
-            --set secrets.NLU_APIKEY=$NLU_APIKEY \
-            --set secrets.NLU_URL=$NLU_URL
-          kubectl rollout status deploy/nes-notebook-execution-service
+          echo "---- PODS ----"
           kubectl get pods -o wide
+          echo "---- DESCRIBE PODS ----"
+          kubectl describe pods
+          echo "---- EVENTS ----"
+          kubectl get events --sort-by=.lastTimestamp | tail -n 100
+          echo "---- LOGS ----"
+          kubectl logs -l app.kubernetes.io/name=notebook-execution-service --all-containers --tail=200 || true

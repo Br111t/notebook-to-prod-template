@@ -3,10 +3,9 @@
 replicaCount: 2
 
 image:
-  repository: your-registry/notebook-execution-service
+  repository: notebook-to-prod
+  tag: "ci"
   pullPolicy: IfNotPresent
-  # tag is overridden on install/CI; defaults to appVersion
-  tag: ""
 
 service:
   type: ClusterIP
