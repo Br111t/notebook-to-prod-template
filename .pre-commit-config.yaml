@@ -52,15 +52,9 @@ repos:
         files: "^notebooks/.*\\.ipynb$"
 
   # 6️⃣  pip-audit for dependency vulnerability checking
-  - repo: local
+  - repo: https://github.com/pypa/pip-audit
+    rev: v2.7.3
     hooks:
       - id: pip-audit
         name: pip-audit (security check)
-        entry: pip-audit
-        language: python
-        language_version: python3
-        types: [python]
-        pass_filenames: false
-        additional_dependencies:
-          - pip-audit==2.7.3
-          - setuptools>=65.5.1
+        args: ["--path", "pyproject.toml"]

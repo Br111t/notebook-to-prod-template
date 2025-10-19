@@ -10,8 +10,8 @@ RUN apt-get update -y \
       build-essential \
       gcc \
       gfortran \
-      libatlas-base-dev \
       libopenblas-dev \
+      liblapack-dev \
  && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
