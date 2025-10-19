@@ -1,0 +1,25 @@
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    labels: ["dependencies", "github-actions"]
+
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    labels: ["dependencies", "docker"]
+
+  # Python dependencies are defined in pyproject.toml (setuptools).
+  # Dependabot doesn't update setuptools-managed pyproject deps, so we omit
+  # a pip configuration here to avoid no-op PRs.
+  - package-ecosystem: "poetry"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    labels: ["dependencies", "python", "poetry"]

@@ -1,7 +1,7 @@
 ############################
 # 1) Builder stage
 ############################
-FROM python:3.11-slim AS builder
+FROM python:3.13-slim AS builder
 
 # Install build‐time deps for SciPy / NumPy
 RUN apt-get update -y \
@@ -32,7 +32,7 @@ RUN pip install --upgrade pip \
 ############################
 # 2) Runtime stage
 ############################
-FROM python:3.11-slim
+FROM python:3.13-slim
 
 WORKDIR /app
 ENV NOTEBOOK_DIR=/app/notebooks
@@ -48,12 +48,11 @@ RUN useradd --create-home appuser
 USER appuser
 
 # Pull in the installed package and its requirements
-COPY --from=builder /usr/local/lib/python3.11/site-packages/ /usr/local/lib/python3.11/site-packages/
+COPY --from=builder /usr/local/lib/python3.13/site-packages/ /usr/local/lib/python3.13/site-packages/
 
 # Copy your application code and notebooks
 COPY src/ /app/src
 COPY notebooks/ /app/notebooks/
-COPY data/ /app/data/
 COPY --chown=appuser:appuser data/ /app/data/
 
 # Healthcheck for smoke‐tests

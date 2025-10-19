@@ -23,20 +23,46 @@ from notebook_service.schemas import NotebookOutputs
 
 # Global settings
 SERVICE_ENV_VAR = "SERVICE_APIKEY"
-DEV = os.getenv("DEV_MODE", "false").lower() == "true"
-service_key_header = APIKeyHeader(name="X-SERVICE-Key", auto_error=False)
 
-# Windows asyncio polict
+# Load environment variables if present (src/.env and repo-root .env)
+try:
+    from dotenv import load_dotenv  # type: ignore
+
+    # local to module path (src/.env)
+    _env_src = Path(__file__).parent.parent / ".env"
+    if _env_src.exists():
+        load_dotenv(dotenv_path=_env_src, override=False)
+    # repo root (../../.env)
+    _env_root = Path(__file__).resolve().parents[2] / ".env"
+    if _env_root.exists():
+        load_dotenv(dotenv_path=_env_root, override=False)
+except Exception:
+    pass
+
+# Evaluate DEV after attempting to load .env
+DEV = os.getenv("DEV_MODE", "false").lower() == "true"
+
+# Accept multiple possible header names for backward compatibility
+service_key_header_primary = APIKeyHeader(
+    name="X-SERVICE-Key",
+    auto_error=False
+)
+service_key_header_alt1 = APIKeyHeader(
+    name="X-Service-Key",
+    auto_error=False
+)
+service_key_header_alt2 = APIKeyHeader(
+    name="X-API-Key",
+    auto_error=False
+)
+
+# Windows asyncio policy
 if sys.platform.startswith("win"):
     # only set the Windows selector policy on Windows hosts
     from asyncio import WindowsSelectorEventLoopPolicy
     asyncio.set_event_loop_policy(WindowsSelectorEventLoopPolicy())
 
-# Load environment variables if present
-env_path = Path(__file__).parent.parent / ".env"
-if env_path.exists():
-    from dotenv import load_dotenv
-    load_dotenv(dotenv_path=env_path)
+# (env loaded above)
 
 # Directory where notebooks live
 NOTEBOOK_DIR = Path(os.getenv("NOTEBOOK_DIR", DEFAULT_NOTEBOOK_DIR))
@@ -75,6 +101,10 @@ async def health():
     result["uptime_seconds"] = int(time.time() - start_time)
     from notebook_service import __version__
     result["version"] = __version__
+    # In DEV mode, don't touch external NLU — return healthy
+    if DEV:
+        result["nlu"] = "skipped"
+        return result
     try:
         from notebook_service.emotion import NLU_CLIENT
         NLU_CLIENT
@@ -88,8 +118,15 @@ async def health():
 
 
 def get_service_key(
-        x_service_key: str = Security(service_key_header)
+    x_service_key_primary: str = Security(service_key_header_primary),
+    x_service_key_alt1: str = Security(service_key_header_alt1),
+    x_service_key_alt2: str = Security(service_key_header_alt2),
 ):
+    x_service_key = (
+        x_service_key_primary
+        or x_service_key_alt1
+        or x_service_key_alt2
+    )
     if not x_service_key:
         raise HTTPException(401, "Missing service API key")
     expected = os.getenv("SERVICE_APIKEY")

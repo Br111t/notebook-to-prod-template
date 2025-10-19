@@ -1,15 +1,15 @@
 # run.ps1
 
-# 1) Read NLU_APIKEY from .env
-$envLines = Get-Content .env | Where-Object { $_ -match '^NLU_APIKEY=' }
+# 1) Read SERVICE_APIKEY from .env
+$envLines = Get-Content .env | Where-Object { $_ -match '^SERVICE_APIKEY=' }
 if (-not $envLines) {
-    Write-Error "Could not find NLU_APIKEY in .env"; exit 1
+    Write-Error "Could not find SERVICE_APIKEY in .env"; exit 1
 }
-$API_KEY = ($envLines -split '=', 2)[1].Trim()
-Write-Host "Using API key: $API_KEY"
+$SERVICE_APIKEY = ($envLines -split '=', 2)[1].Trim()
+Write-Host "Using SERVICE_APIKEY: $SERVICE_APIKEY"
 
 # 2) Params
-$NOTEBOOK = 'semantic_feature_extraction.ipynb'
+$NOTEBOOK = 'sfe.ipynb'
 $FMT      = 'trimmed'
 $OUT      = 'data/processed/extracted_features.json'
 
@@ -22,7 +22,7 @@ do {
     Start-Sleep -Seconds 1
     $attempts++
     try {
-        $hc = Invoke-RestMethod -Uri "http://localhost:8000/health" -Headers @{ "X-API-Key" = $API_KEY }
+        $hc = Invoke-RestMethod -Uri "http://localhost:8000/health" -Headers @{ "X-SERVICE-Key" = $SERVICE_APIKEY }
         if ($hc.status -eq "ok") {
             Write-Host "API is healthy after $attempts second(s)."
             break
@@ -43,7 +43,7 @@ Write-Host "Calling $uri"
 try {
     Invoke-RestMethod `
       -Uri $uri `
-      -Headers @{ "X-API-Key" = $API_KEY } `
+      -Headers @{ "X-SERVICE-Key" = $SERVICE_APIKEY } `
       -OutFile $OUT -ErrorAction Stop
     Write-Host "✅ Wrote output to $OUT"
 } catch {
