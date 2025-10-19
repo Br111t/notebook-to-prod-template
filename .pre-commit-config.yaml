@@ -47,7 +47,7 @@ repos:
         language: python
         language_version: python3        # optional, keeps envs consistent
         additional_dependencies:
-          - "black[jupyter]==24.1.0"
+          - "black[jupyter]==24.3.0"
         args: ["--line-length=79"]
         files: "^notebooks/.*\\.ipynb$"
 

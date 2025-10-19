@@ -23,10 +23,11 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
             - containerPort: {{ .Values.service.targetPort }}
+          envFrom:
+            # non-secret configuration
+            - configMapRef:
+                name: {{ include "notebook-execution-service.fullname" . }}-config
           env:
-            # keep non-secret flags from values
-            - name: DEV_MODE
-              value: "{{ .Values.env.DEV_MODE }}"
 
             # secrets come from the Secret
             - name: SERVICE_APIKEY

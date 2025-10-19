@@ -15,17 +15,16 @@ jobs:
       SERVICE_APIKEY: ${{ secrets.SERVICE_APIKEY }}
       DEV_MODE: ${{ github.ref == 'refs/heads/main' && 'false' || 'true' }}
 
-
     steps:
-      # 1️⃣  Checkout code
+      # 1) Checkout code
       - uses: actions/checkout@v4
 
-      # 2️⃣  Python toolchain
+      # 2) Python toolchain
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: "3.13"
 
-      # 3️⃣  Cache pip downloads
+      # 3) Cache pip downloads
       - name: Cache pip
         uses: actions/cache@v4
         with:
@@ -34,13 +33,13 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pip-
 
-      # 4️⃣  Install deps (core + dev)
+      # 4) Install deps (core + dev)
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip setuptools wheel
           pip install -e ".[dev]"
 
-      # 5️⃣  Restore cached pre-commit hook environments
+      # 5) Restore cached pre-commit hook environments
       - name: Restore pre-commit envs
         uses: actions/cache@v4
         with:
@@ -49,18 +48,18 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-precommit-
 
-      # 6️⃣  Lint & format checks (driven by .pre-commit-config.yaml)
+      # 6) Lint & format checks (driven by .pre-commit-config.yaml)
       - name: Lint and format (pre-commit)
         run: pre-commit run --all-files --hook-stage manual
 
-      # 7️⃣ Cache pytest’s own cache directory
+      # 7) Cache pytest's own cache directory
       - name: Cache pytest cache
         uses: actions/cache@v4
         with:
           path: .pytest_cache
           key: ${{ runner.os }}-pytest-${{ hashFiles('**/pytest.ini') }}
 
-      # 8️⃣  Tests + coverage
+      # 8) Tests + coverage
       - name: Prepare reports directory
         run: |
           mkdir -p reports/htmlcov
@@ -68,18 +67,21 @@ jobs:
       - name: Run tests with coverage
         run: pytest -q
 
-      # 9️⃣  Add coverage to repo
+      - name: Critical coverage gate
+        run: coverage report --rcfile=.coveragerc-critical
+
+      # 9) Upload coverage to Codecov
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
         with:
           files: reports/coverage.xml
           flags: unittests
 
-      # 🔟  Build Docker image (optional artifact)
+      # 10) Build Docker image (optional artifact)
       - name: Build Docker image
         run: docker build . --tag notebook-to-prod:ci
 
-      # 11️⃣  Check that secrets are passed (partial echo)
+      # 11) Check that secrets are passed (partial echo)
       - name: Check that secrets are passed (partial echo)
         run: |
           echo "NLU_APIKEY starts with: ${NLU_APIKEY:0:6}******"
@@ -88,7 +90,7 @@ jobs:
           NLU_APIKEY: ${{ secrets.NLU_APIKEY }}
           NLU_URL: ${{ secrets.NLU_URL }}
 
-      # 12️⃣  Run smoke test (mock NLU)
+      # 12) Run smoke test (mock NLU)
       - name: Run smoke test (mock NLU)
         if: github.ref != 'refs/heads/main'
         run: |
@@ -104,29 +106,29 @@ jobs:
             if curl --fail http://localhost:8000/health; then
               break
             fi
-            echo "Waiting for app… ($i)"
+            echo "Waiting for app ($i)"
             sleep 1
           done
 
-          echo "🪵 Container logs (ID=$CONTAINER_ID):"
+          echo "Container logs (ID=$CONTAINER_ID):"
           docker logs $CONTAINER_ID
 
-          echo "🌐 Hitting secured /run endpoint:"
-          curl -H "X-Service-Key: $SERVICE_APIKEY" \
-               -v http://localhost:8000/run/semantic_feature_extraction
+          echo "Hitting secured /run endpoint:"
+          curl -H "X-SERVICE-Key: $SERVICE_APIKEY" \
+               -v "http://localhost:8000/run?notebook=sfe.ipynb&fmt=trimmed"
 
-          echo "🌐 Listing processed files:"
-          curl -H "X-Service-Key: $SERVICE_APIKEY" \
+          echo "Listing processed files:"
+          curl -H "X-SERVICE-Key: $SERVICE_APIKEY" \
                http://localhost:8000/processed
 
-          echo "🌐 Downloading a processed artifact (CSV):"
-          curl -H "X-Service-Key: $SERVICE_APIKEY" \
+          echo "Downloading a processed artifact (CSV):"
+          curl -H "X-SERVICE-Key: $SERVICE_APIKEY" \
                http://localhost:8000/processed/concept_features.csv
 
           # Clean up now that we're done
           docker rm -f $CONTAINER_ID
 
-      # 🌟 13️⃣ Run smoke test (real Watson NLU)
+      # 13) Run smoke test (real Watson NLU)
       - name: Run smoke test (real Watson NLU)
         if: github.ref == 'refs/heads/main'
         run: |
@@ -142,23 +144,23 @@ jobs:
             if curl --fail http://localhost:8000/health; then
               break
             fi
-            echo "Waiting for app… ($i)"
+            echo "Waiting for app ($i)"
             sleep 1
           done
-          echo "🪵 Container logs (ID=$CONTAINER_ID):"
+          echo "Container logs (ID=$CONTAINER_ID):"
           docker logs $CONTAINER_ID
 
-          echo "🌐 Hitting secured /run endpoint:"
-          curl -H "X-Service-Key: $SERVICE_APIKEY" \
-               -v http://localhost:8000/run/semantic_feature_extraction
+          echo "Hitting secured /run endpoint:"
+          curl -H "X-SERVICE-Key: $SERVICE_APIKEY" \
+               -v "http://localhost:8000/run?notebook=sfe.ipynb&fmt=trimmed"
 
-          echo "🌐 Downloading processed JSON:"
-          curl -H "X-Service-Key: $SERVICE_APIKEY" \
+          echo "Downloading processed JSON:"
+          curl -H "X-SERVICE-Key: $SERVICE_APIKEY" \
                http://localhost:8000/processed/extracted_features.json
 
           docker rm -f $CONTAINER_ID
 
-  # 14️⃣ Optional: Helm dry-run (feature branches only)
+  # 14) Optional: Helm dry-run (feature branches only)
   helm-dry-run:
     needs: build-and-test
     if: github.ref != 'refs/heads/main'
@@ -182,9 +184,9 @@ jobs:
             --set persistence.enabled=true \
             --set persistence.mountPath=/app/data/processed \
             --dry-run > rendered.yaml
-          echo "✅ Helm chart rendered successfully"
+          echo "Helm chart rendered successfully"
 
-  # 15️⃣ Deploy to Minikube (main only)
+  # 15) Deploy to Minikube (main only)
   deploy-to-minikube:
     needs: build-and-test
     runs-on: ubuntu-latest
@@ -217,15 +219,3 @@ jobs:
           SERVICE_APIKEY: ${{ secrets.SERVICE_APIKEY }}
           NLU_APIKEY: ${{ secrets.NLU_APIKEY }}
           NLU_URL: ${{ secrets.NLU_URL }}
-
-      - name: Debug on failure
-        if: failure()
-        run: |
-          echo "---- PODS ----"
-          kubectl get pods -o wide
-          echo "---- DESCRIBE PODS ----"
-          kubectl describe pods
-          echo "---- EVENTS ----"
-          kubectl get events --sort-by=.lastTimestamp | tail -n 100
-          echo "---- LOGS ----"
-          kubectl logs -l app.kubernetes.io/name=notebook-execution-service --all-containers --tail=200 || true
